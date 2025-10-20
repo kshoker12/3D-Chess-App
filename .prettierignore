@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+
+# Generated files
+*.min.js
+*.min.css
+
+# Binary files
+*.glb
+*.jpeg
+*.jpg
+*.png
+*.svg
+
+# Config files that should maintain their format
+*.lock
