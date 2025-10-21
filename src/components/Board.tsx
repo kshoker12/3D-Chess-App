@@ -1,151 +1,40 @@
-import { Box, useTexture } from '@react-three/drei';
-import React, { useContext } from 'react';
-import { ChessContext } from '../context/ChessContext';
-import Piece from './Piece';
+import { useTexture } from '@react-three/drei';
+import { FC, useMemo } from 'react';
+import { useAppSelector } from '../store/hooks';
+import { selectBoard } from '../store/selectors/boardSelectors';
+import Square from './Square';
+import { Rank, SQUARE_COLOURS, SquareId } from '../types/boardTypes';
+import Pieces from './Pieces';
 
-const findPiece = (boardPiece, teams) => {
-	let index = -1;
-	let piece = null;
-	if (boardPiece) {
-		teams[boardPiece.team].pieces.map((p, i) => {
-			if (p.code === boardPiece.piece) {
-				piece = p;
-				index = i;
-			}
-		});
-	}
-	return { index, piece };
-};
-
-const CreatePiece = ({ boardPiece, pos }) => {
-	const { teams } = useContext(ChessContext);
-
-	const { piece, index } = findPiece(boardPiece, teams);
-
-	if (piece !== null) {
-		return <Piece piece={piece} index={index} team={teams[boardPiece.team].id} />;
-	}
-};
-
-const BoardSquare = ({ texture, pos, wood, boardPiece }) => {
-	const { dispatch, selectedPiece, teams, turn } = useContext(ChessContext);
-	const whiteTexture = useTexture('./whiteface.jpeg');
-
-	if (
-		selectedPiece.selected &&
-		teams[selectedPiece.team].pieces[selectedPiece.index].pos.x === pos.x &&
-		teams[selectedPiece.team].pieces[selectedPiece.index].pos.y === pos.y
-	) {
-		return (
-			<>
-				<Box
-					args={[1, 0.4, 1]}
-					position={[pos.x - 4, -0.6, pos.y - 4]}
-					onClick={(e) => {
-						e.stopPropagation();
-						if (selectedPiece.selected) {
-							let bool = true;
-							teams[selectedPiece.team].pieces.map((piece) => {
-								if (piece.pos.x === pos.x && piece.pos.y === pos.y) {
-									bool = false;
-								}
-							});
-							if (bool) {
-								dispatch({
-									type: 'SET_TARGET',
-									payload: { x: pos.x, y: pos.y },
-								});
-							}
-						} else {
-							if (boardPiece.object && boardPiece.object.team === turn) {
-								dispatch({
-									type: 'SET_PIECES',
-									payload: { team: turn, index: findPiece(boardPiece.object, teams).index },
-								});
-							}
-						}
-					}}
-				>
-					<meshStandardMaterial color={'grey'} attach={'material-0'} map={wood} />
-					<meshStandardMaterial color={'grey'} attach={'material-1'} map={wood} />
-					<meshStandardMaterial color={'lime'} attach={'material-2'} map={whiteTexture} />
-					<meshStandardMaterial color={'grey'} attach={'material-3'} map={wood} />
-					<meshStandardMaterial color={'grey'} attach={'material-4'} map={wood} />
-					<meshStandardMaterial color={'grey'} attach={'material-5'} map={wood} />
-				</Box>
-				<CreatePiece boardPiece={boardPiece.object} pos={pos} />
-			</>
-		);
-	} else {
-		return (
-			<>
-				<Box
-					args={[1, 0.4, 1]}
-					position={[pos.x - 4, -0.6, pos.y - 4]}
-					onClick={(e) => {
-						e.stopPropagation();
-						if (selectedPiece.selected) {
-							let bool = true;
-							let index = -1;
-							teams[selectedPiece.team].pieces.map((piece, i) => {
-								if (piece.visible && piece.pos.x === pos.x && piece.pos.y === pos.y) {
-									bool = false;
-									index = i;
-								}
-							});
-							if (bool) {
-								dispatch({
-									type: 'SET_TARGET',
-									payload: { x: pos.x, y: pos.y },
-								});
-							} else {
-								dispatch({
-									type: 'SET_PIECES',
-									payload: { team: selectedPiece.team, index: index },
-								});
-							}
-						} else {
-							if (boardPiece.object && boardPiece.object.team === turn) {
-								dispatch({
-									type: 'SET_PIECES',
-									payload: { team: turn, index: findPiece(boardPiece.object, teams).index },
-								});
-							}
-						}
-					}}
-				>
-					<meshStandardMaterial color={'grey'} attach={'material-0'} map={wood} />
-					<meshStandardMaterial color={'grey'} attach={'material-1'} map={wood} />
-					<meshStandardMaterial color={'white'} attach={'material-2'} map={texture} />
-					<meshStandardMaterial color={'grey'} attach={'material-3'} map={wood} />
-					<meshStandardMaterial color={'grey'} attach={'material-4'} map={wood} />
-					<meshStandardMaterial color={'grey'} attach={'material-5'} map={wood} />
-				</Box>
-				<CreatePiece boardPiece={boardPiece.object} pos={pos} />
-			</>
-		);
-	}
-};
-
-const Board = () => {
-	const { board } = useContext(ChessContext);
+const Board: FC = () => {
+	const board = useAppSelector(selectBoard);
 	const white = useTexture('./whiteface.jpeg');
 	const brown = useTexture('./brownface.jpeg');
 	const wood = useTexture('./woodTexture.jpeg');
 
-	return board.map((row1, rowIndex) => {
-		return row1.map((col1, colIndex) => {
+	// Memoize the square list to prevent recreation on every render
+	const squares = useMemo(() => {
+		return Object.keys(board).map((squareId) => {
+			const file = squareId.charAt(0) as unknown as string;
+			const rank = parseInt(squareId.charAt(1)) as unknown as Rank;
 			return (
-				<BoardSquare
-					key={colIndex * 8 + rowIndex}
-					boardPiece={col1}
-					pos={{ y: rowIndex, x: colIndex }}
-					wood={wood}
-					texture={rowIndex % 2 === 0 ? (colIndex % 2 === 1 ? brown : white) : colIndex % 2 === 0 ? brown : white}
+				<Square 
+					key={squareId} 
+					squareId={squareId as SquareId} 
+					texture={SQUARE_COLOURS[file][rank] === 'white' ? white : brown} 
+					wood={wood} 
+					white={white}
 				/>
 			);
 		});
-	});
+	}, [board, white, brown, wood]);
+
+	return (
+		<>
+			{squares}
+			<Pieces />
+		</>
+	)
 };
 
 export default Board;

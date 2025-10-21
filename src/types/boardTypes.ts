@@ -15,7 +15,13 @@ export type Rank = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export type SquareId = `${File}${Rank}`;
 
-export const SQUARE_COLOURS = {
+export interface SquareColourMap {
+    [key: string]: {
+        [key in Rank]: 'white' | 'black';
+    };
+}
+
+export const SQUARE_COLOURS: SquareColourMap = {
     'a': {
         '1': 'black',
         '2': 'white',
@@ -102,8 +108,14 @@ export type PieceColor = 'w' | 'b';
 
 export type PieceId = `${PieceColor}${PieceType}`;
 
+export interface Piece {
+    id: string;
+    pieceId: PieceId;
+    position: { x: number; y: number; z: number };
+}
+
 export type Board = {
-    [key in SquareId]: PieceId | null;
+    [key in SquareId]: Piece | null;
 };
 
 /**
@@ -118,4 +130,6 @@ export interface BoardState {
     lastMove: Move | null;
     legalSquares: SquareId[];
     board: Board;
+    pieces: Piece[]; // Array of all pieces for rendering
+    movingPiece: Piece | null;
 }

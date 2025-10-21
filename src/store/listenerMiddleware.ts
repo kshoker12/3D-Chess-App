@@ -1,7 +1,7 @@
 import { createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
 import type { AppDispatch, RootState } from './store';
 import { prevMove, nextMove, resetGame, currentMove } from './slices/gameSlice';
-import { setBoardStateFromFen } from './slices/boardSlice';
+import { setBoardFromFen } from './slices/boardSlice';
 
 export const listenerMiddleware = createListenerMiddleware();
 
@@ -11,7 +11,7 @@ const handlePlayIndexChange = (action: any, listenerApi: any) => {
 	const currentPlayIndex = state.game.playIndex;
 	const currentFen = state.game.history[currentPlayIndex];
 
-    listenerApi.dispatch(setBoardStateFromFen(currentFen));
+    listenerApi.dispatch(setBoardFromFen(currentFen));
 	
 	// Add your arbitrary action here
 	// For example, you could:

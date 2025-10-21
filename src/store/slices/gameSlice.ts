@@ -1,11 +1,12 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { GameState, GameStatus } from "../../types/gameTypes";
+import { GameState, GameStatus, Move } from "../../types/gameTypes";
 import { START_FEN } from "../../utils/fen";
 import { AppDispatch, RootState } from "../store";
-import { Chess, Move } from "chess.js";
-import { capturePiece } from "./uiSlice";
-import { PieceType } from "../../types/boardTypes";
-import { setBoardStateFromFen, setLastMove, setSelectedSquare } from "./boardSlice";
+import { Chess } from "chess.js";
+import { capturePiece, setFenParts, startGame } from "./uiSlice";
+import { Piece, PieceType } from "../../types/boardTypes";
+import { applyMove, setLastMove, setMovingPiece, setSelectedSquare } from "./boardSlice";
+import { parseFen } from "../../utils/fen";
 
 const initialState: GameState = {
     history: [START_FEN],
@@ -19,22 +20,76 @@ export const makeMove = createAsyncThunk<
     { state: RootState, dispatch: AppDispatch }
 >('game/makeMove', (move, {dispatch, getState }) => {
     const currentFen = getState().game.history[getState().game.history.length - 1];
-    const chess = new Chess(currentFen);
-
-    try {
-        const result = chess.move(move);
-        if (!result) throw new Error('Invalid move');
-        const newFen = chess.fen();
-        if (result.captured) {
-            dispatch(capturePiece({team: result.color === 'w' ? 'w' : 'b', pieceType: result.captured as PieceType}));
-        }
-        dispatch(setLastMove({from: move.from, to: move.to, promotion: move.promotion as PieceType | undefined}));
-        dispatch(setBoardStateFromFen(newFen));
-        dispatch(setSelectedSquare(null));
-        return {status: GameStatus.PLAYING, fen: newFen};
-    } catch (error) {
-        dispatch(setSelectedSquare(null));
-        return {status: GameStatus.ERROR, fen: currentFen};
+    // Make move only if move to square is not occupied by the active team
+    if (getState().board.board[move.to]?.pieceId.charAt(0) === getState().ui.fenParts.active) {
+        dispatch(setSelectedSquare(move.to));
+        return {status: GameStatus.ERROR, fen: getState().game.history[getState().game.history.length - 1]};
+    } else {
+        const chess = new Chess(currentFen);
+        try {
+            let result;
+            // Try the move first without promotion
+            try {
+                result = chess.move(move);
+            } catch (error) {
+                // If move fails and it's a pawn reaching the end, try with queen promotion
+                const fromPiece = chess.get(move.from);
+                if (fromPiece && fromPiece.type === 'p') {
+                    const isWhitePawn = fromPiece.color === 'w';
+                    const isReachingEnd = isWhitePawn ? move.to.charAt(1) === '8' : move.to.charAt(1) === '1';
+                    
+                    if (isReachingEnd) {
+                        const moveWithPromotion = { ...move, promotion: 'q' };
+                        result = chess.move(moveWithPromotion);
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    throw error;
+                }
+            }
+            
+            if (!result) throw new Error('Invalid move');
+            const newFen = chess.fen();
+            
+            // Check game status after move
+            let gameStatus = GameStatus.PLAYING;
+            if (chess.isCheckmate()) {
+                gameStatus = GameStatus.CHECKMATE;
+            } else if (chess.isStalemate()) {
+                gameStatus = GameStatus.STALEMATE;
+            } else if (chess.isDraw()) {
+                gameStatus = GameStatus.DRAW;
+            } else if (chess.isCheck()) {
+                gameStatus = GameStatus.CHECK;
+            }
+            
+            if (result.captured) {
+                dispatch(capturePiece({team: result.color === 'w' ? 'b' : 'w', pieceType: result.captured as PieceType}));
+            }
+            dispatch(setMovingPiece(getState().board.board[move.from] as Piece | null));
+            // Create move object with promotion information from chess.js result
+            const moveWithPromotion = {
+                from: move.from,
+                to: move.to,
+                promotion: result.promotion ? result.promotion.toUpperCase() as PieceType : move.promotion
+            };
+            
+            dispatch(setLastMove({from: move.from, to: move.to, promotion: result.promotion ? result.promotion.toUpperCase() as PieceType : undefined}));
+            dispatch(applyMove({move: moveWithPromotion, chessResult: result}));
+            dispatch(setFenParts(parseFen(newFen)));
+            dispatch(setSelectedSquare(null));
+            
+            // Start the game timer if it's the first move
+            if (!getState().ui.gameStarted) {
+                dispatch(startGame());
+            }
+            
+            return {status: gameStatus, fen: newFen};
+        } catch (error) {
+            dispatch(setSelectedSquare(null));
+            return {status: GameStatus.ERROR, fen: currentFen};
+        }    
     }
 })
 

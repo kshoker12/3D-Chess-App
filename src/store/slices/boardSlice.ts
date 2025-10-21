@@ -1,15 +1,18 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { BoardState, SquareId } from "../../types/boardTypes";
-import { createBoard, getLegalMoves } from "../../utils/ChessHelper";
+import { BoardState, Piece, SquareId } from "../../types/boardTypes";
+import { createBoard, getLegalMoves, applyMoveToBoard } from "../../utils/ChessHelper";
 import { START_FEN } from "../../utils/fen";
 import { Move } from "../../types/gameTypes";
 import { AppDispatch, RootState } from "../store";
 
+const initialBoardData = createBoard(START_FEN);
 const initialState: BoardState = {
-    board: createBoard(START_FEN),
+    board: initialBoardData.board,
+    pieces: initialBoardData.pieces,
     selectedSquare: null,
     legalSquares: [],
     lastMove: null,
+    movingPiece: null,
 }
 
 /**
@@ -21,18 +24,19 @@ export const setSelectedSquare = createAsyncThunk<
     SquareId[],
     SquareId | null,
     { state: RootState; dispatch: AppDispatch }
->('board/selectSquare', (squareId, { getState }) => {
+>('board/selectSquare', (squareId, { getState, rejectWithValue }) => {
     const state = getState();
     const currentFen = state.game.history[state.game.history.length - 1];
+    const turn = state.ui.fenParts.active;
     
     try {
         if (squareId === null) throw new Error();
-        ;
+        if (state.board.board[squareId] === null) throw new Error();
+        if (state.board.board[squareId].pieceId.charAt(0) !== turn) throw new Error();
         const legalMoves = getLegalMoves(currentFen, squareId as SquareId);
         return legalMoves;
     } catch (error) {
-        console.error('Error fetching legal moves:', error);
-        return [];
+        return rejectWithValue([]);
     }
 });
 
@@ -43,8 +47,18 @@ const boardSlice = createSlice({
         setLastMove: (state, action: PayloadAction<Move | null>) => {
             state.lastMove = action.payload;
         },
-        setBoardStateFromFen: (state, action: PayloadAction<string>) => {
-            state.board = createBoard(action.payload);
+        applyMove: (state, action: PayloadAction<{move: Move, chessResult: any}>) => {
+            const result = applyMoveToBoard(state.board, state.pieces, action.payload.move, action.payload.chessResult);
+            state.board = result.board;
+            state.pieces = result.pieces;
+        },
+        setBoardFromFen: (state, action: PayloadAction<string>) => {
+            const result = createBoard(action.payload);
+            state.board = result.board;
+            state.pieces = result.pieces;
+        },
+        setMovingPiece: (state, action: PayloadAction<Piece | null>) => {
+            state.movingPiece = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -62,5 +76,5 @@ const boardSlice = createSlice({
     }
 })
 
-export const { setLastMove, setBoardStateFromFen } = boardSlice.actions;
+export const { setLastMove, applyMove, setBoardFromFen, setMovingPiece } = boardSlice.actions;
 export default boardSlice.reducer;

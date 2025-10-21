@@ -1,14 +1,13 @@
-import { ChessProvider } from './context/ChessContext';
 import AppCanvas from './AppCanvas';
-import { LoadChessTeam } from './utils/ChessHelper';
+import { Provider } from 'react-redux';
+import { store } from './store/store';
 
 function App() {
-	const teams = [LoadChessTeam('white'), LoadChessTeam('black')];
 
 	return (
-		<ChessProvider teams={teams}>
+		<Provider store={store}>
 			<AppCanvas />
-		</ChessProvider>
+		</Provider>
 	);
 }
 

@@ -4,6 +4,7 @@ export interface Team {
     color: 'white' | 'black';
     points: number;
     capturedPieces: PieceType[];
+    timeRemaining: number; // in seconds
 }
 
 export type FenParts = {
@@ -38,5 +39,7 @@ export interface UIState {
     teams: {
         w: Team;
         b: Team;
-    }
+    };
+    gameStarted: boolean;
+    timerInterval: NodeJS.Timeout | null;
 }
