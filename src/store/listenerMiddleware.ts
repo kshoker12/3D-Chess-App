@@ -1,12 +1,14 @@
 import { createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
 import type { AppDispatch, RootState } from './store';
-import { prevMove, nextMove, resetGame, currentMove } from './slices/gameSlice';
+import { prevMove, nextMove, resetGame, currentMove, makeMove, makeBotMove } from './slices/gameSlice';
 import { setBoardFromFen } from './slices/boardSlice';
+import { GameMode } from '../types/uiTypes';
+import { GameStatus } from '../types/gameTypes';
 
 export const listenerMiddleware = createListenerMiddleware();
 
 // Helper function to handle playIndex changes
-const handlePlayIndexChange = (action: any, listenerApi: any) => {
+const handlePlayIndexChange = (_action: any, listenerApi: any) => {
 	const state = listenerApi.getState();
 	const currentPlayIndex = state.game.playIndex;
 	const currentFen = state.game.history[currentPlayIndex];
@@ -32,4 +34,25 @@ const handlePlayIndexChange = (action: any, listenerApi: any) => {
 listenerMiddleware.startListening.withTypes<RootState, AppDispatch>()({
 	matcher: isAnyOf(prevMove, nextMove, resetGame, currentMove),
 	effect: handlePlayIndexChange,
+});
+
+// Listen for bot turns after moves are completed
+listenerMiddleware.startListening.withTypes<RootState, AppDispatch>()({
+	matcher: makeMove.fulfilled.match,
+	effect: async (_action, listenerApi) => {
+		const state = listenerApi.getState();
+		
+		// Check if we should trigger bot move
+		if (
+			state.ui.gameMode === GameMode.VS_BOT &&
+			state.ui.fenParts.active !== state.ui.playerColor &&
+			(state.game.status === GameStatus.PLAYING || state.game.status === GameStatus.CHECK) &&
+			!state.ui.botThinking
+		) {
+			// Small delay for better UX
+			setTimeout(() => {
+				listenerApi.dispatch(makeBotMove());
+			}, 500);
+		}
+	},
 });

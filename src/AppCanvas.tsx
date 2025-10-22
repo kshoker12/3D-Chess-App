@@ -5,8 +5,8 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import Board from './components/Board';
 import CameraController from './components/CameraController';
 import Table from './components/Table';
-import Debug from './components/Debug';
 import GameUI from './components/GameUI';
+import GameModeMenu from './components/GameModeMenu';
 
 const AppCanvas = () => {
 	const orbitRef = useRef<any>(null);
@@ -14,6 +14,7 @@ const AppCanvas = () => {
 	return (
 		<div style = {{height: '100%', width: '100%'}}>
 			{/* <Debug /> */}
+			<GameModeMenu />
 			<GameUI />
 			<Canvas style = {{height: '100vh', width: '100vw'}} gl={{ preserveDrawingBuffer: true }} camera={{ position: [0, 7, -7], fov: 60 }}>
 				<Suspense fallback={null}>

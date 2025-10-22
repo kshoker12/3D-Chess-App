@@ -8,6 +8,7 @@ import { setSelectedSquare } from "../store/slices/boardSlice";
 import { makeMove } from "../store/slices/gameSlice";
 import { Move } from "../types/gameTypes";
 import { store } from "../store/store";
+import { GameMode } from "../types/uiTypes";
 
 export interface SquareProps {
     squareId: SquareId;
@@ -41,6 +42,18 @@ const Square: FC<SquareProps> = memo(({squareId, texture, wood, white}) => {
         const currentState = store.getState();
         const selectedSquare = currentState.board.selectedSquare;
         
+        // Check game mode restrictions
+        if (currentState.ui.gameMode === GameMode.VS_BOT) {
+            // In vs-bot mode, check if it's the user's turn
+            if (currentState.ui.fenParts.active !== currentState.ui.playerColor) {
+                return; // Not user's turn, ignore click
+            }
+            // Check if bot is thinking
+            if (currentState.ui.botThinking) {
+                return; // Bot is thinking, ignore click
+            }
+        }
+        
         if (selectedSquare === squareId) {
             dispatch(setSelectedSquare(null));
         } else if (selectedSquare === null) {
@@ -67,7 +80,7 @@ const Square: FC<SquareProps> = memo(({squareId, texture, wood, white}) => {
                 <meshStandardMaterial color={'grey'} attach={'material-3'} map={wood} />
                 <meshStandardMaterial color={'grey'} attach={'material-4'} map={wood} />
                 <meshStandardMaterial color={'grey'} attach={'material-5'} map={wood} />
-                {isLegal && <Outlines color="lime" scale={1.1} thickness={1} />}
+                {isLegal && <Outlines color="lime" scale={1} thickness={0.1} />}
             </Box>
             
             {/* Chess.com style circle indicator for legal moves */}

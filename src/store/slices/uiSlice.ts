@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { FenParts, PIECE_VALUE, UIState } from "../../types/uiTypes";
+import { FenParts, PIECE_VALUE, UIState, GameMode } from "../../types/uiTypes";
 import { parseFen, START_FEN } from "../../utils/fen";
 import { PieceType } from "../../types/boardTypes";
 
@@ -21,6 +21,10 @@ const initialState: UIState = {
     },
     gameStarted: false,
     timerInterval: null,
+    gameMode: null,
+    playerColor: null,
+    showGameModeMenu: true,
+    botThinking: false,
 }
 
 const uiSlice = createSlice({
@@ -39,7 +43,12 @@ const uiSlice = createSlice({
             };
         },
         resetUI: () => {
-            return initialState;
+            return {
+                ...initialState,
+                showGameModeMenu: true,
+                gameMode: null,
+                playerColor: null,
+            };
         },
         startGame: (state) => {
             state.gameStarted = true;
@@ -59,9 +68,21 @@ const uiSlice = createSlice({
         },
         setTimerInterval: (state, action: PayloadAction<NodeJS.Timeout | null>) => {
             state.timerInterval = action.payload;
+        },
+        setGameMode: (state, action: PayloadAction<GameMode>) => {
+            state.gameMode = action.payload;
+        },
+        setPlayerColor: (state, action: PayloadAction<'w' | 'b'>) => {
+            state.playerColor = action.payload;
+        },
+        setShowGameModeMenu: (state, action: PayloadAction<boolean>) => {
+            state.showGameModeMenu = action.payload;
+        },
+        setBotThinking: (state, action: PayloadAction<boolean>) => {
+            state.botThinking = action.payload;
         }
     }
 });
 
-export const { setFenParts, capturePiece, resetUI, startGame, pauseGame, decrementTimer, resetTimers, setTimerInterval } = uiSlice.actions;
+export const { setFenParts, capturePiece, resetUI, startGame, pauseGame, decrementTimer, resetTimers, setTimerInterval, setGameMode, setPlayerColor, setShowGameModeMenu, setBotThinking } = uiSlice.actions;
 export default uiSlice.reducer;

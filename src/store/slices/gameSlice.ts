@@ -3,10 +3,12 @@ import { GameState, GameStatus, Move } from "../../types/gameTypes";
 import { START_FEN } from "../../utils/fen";
 import { AppDispatch, RootState } from "../store";
 import { Chess } from "chess.js";
-import { capturePiece, setFenParts, startGame } from "./uiSlice";
+import { capturePiece, setFenParts, startGame, setBotThinking, setGameMode } from "./uiSlice";
+import { GameMode } from "../../types/uiTypes";
 import { Piece, PieceType } from "../../types/boardTypes";
 import { applyMove, setLastMove, setMovingPiece, setSelectedSquare } from "./boardSlice";
 import { parseFen } from "../../utils/fen";
+import { fetchBotMove, MoveResponse } from "../api/botApi";
 
 const initialState: GameState = {
     history: [START_FEN],
@@ -92,6 +94,61 @@ export const makeMove = createAsyncThunk<
         }    
     }
 })
+
+export const makeBotMove = createAsyncThunk<
+    {status: GameStatus; fen: string},
+    void,
+    { state: RootState, dispatch: AppDispatch }
+>('game/makeBotMove', async (_, {dispatch, getState}) => {
+    let botResponse: MoveResponse | null = null;
+    try {
+        dispatch(setBotThinking(true));
+        
+        const currentFen = getState().game.history[getState().game.history.length - 1];
+        botResponse = await fetchBotMove(currentFen);
+        
+        // Parse move string (e.g., "e2e4" or "e7e8q" for promotion)
+        const moveString = botResponse.best_move;
+        if (moveString.length < 4 || moveString.length > 5) {
+            throw new Error(`Invalid move format: ${moveString}`);
+        }
+        
+        const move: Move = {
+            from: moveString.substring(0, 2) as any,
+            to: moveString.substring(2, 4) as any
+        };
+        
+        // Handle promotion moves (5 characters: e7e8q)
+        if (moveString.length === 5) {
+            const promotionPiece = moveString.charAt(4).toUpperCase();
+            move.promotion = promotionPiece as any;
+        }
+        
+        // Dispatch the move using existing makeMove logic
+        const result = await dispatch(makeMove(move));
+        
+        dispatch(setBotThinking(false));
+        
+        // Check if the move was successful
+        if (result.meta.requestStatus === 'rejected') {
+            throw new Error(`Move execution failed: ${result.payload}`);
+        }
+        
+        return result.payload as {status: GameStatus; fen: string};
+    } catch (error) {
+        dispatch(setBotThinking(false));
+        console.error('Bot move failed:', error);
+        console.error('Move string that failed:', botResponse?.best_move);
+        console.error('Current FEN:', getState().game.history[getState().game.history.length - 1]);
+        
+        // Fallback to pass-and-play mode
+        dispatch(setGameMode(GameMode.PASS_AND_PLAY));
+        
+        // Return current state on error
+        const currentFen = getState().game.history[getState().game.history.length - 1];
+        return {status: GameStatus.PLAYING, fen: currentFen};
+    }
+});
 
 const gameSlice = createSlice({
     name: 'game',

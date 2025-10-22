@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
-import { decrementTimer, pauseGame, startGame, resetUI } from '../store/slices/uiSlice';
+import { decrementTimer, pauseGame, startGame, resetUI, setShowGameModeMenu } from '../store/slices/uiSlice';
 import { PieceType } from '../types/boardTypes';
 import { PIECE_VALUE } from '../types/uiTypes';
 import { GameStatus } from '../types/gameTypes';
@@ -10,7 +10,7 @@ import { setBoardFromFen, setLastMove, setMovingPiece } from '../store/slices/bo
 
 const GameUI: React.FC = () => {
     const dispatch = useDispatch();
-    const { teams, fenParts, gameStarted } = useSelector((state: RootState) => state.ui);
+    const { teams, fenParts, gameStarted, gameMode, playerColor } = useSelector((state: RootState) => state.ui);
     const { status } = useSelector((state: RootState) => state.game);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -89,6 +89,8 @@ const GameUI: React.FC = () => {
         dispatch(setBoardFromFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'));
         dispatch(setLastMove(null));
         dispatch(setMovingPiece(null));
+        // Show game mode menu for new game
+        dispatch(setShowGameModeMenu(true));
     };
 
     const getPieceImage = (pieceType: PieceType): string => {
@@ -125,6 +127,16 @@ const GameUI: React.FC = () => {
                                 <i className="fas fa-chess-king text-black text-xl"></i>
                             </div>
                             <span className="text-white font-bold text-xl">White</span>
+                            {gameMode === 'vs_bot' && playerColor === 'w' && (
+                                <span className="text-green-400 text-sm font-semibold bg-green-900/30 px-2 py-1 rounded">
+                                    <i className="fas fa-user mr-1"></i>You
+                                </span>
+                            )}
+                            {gameMode === 'vs_bot' && playerColor === 'b' && (
+                                <span className="text-purple-400 text-sm font-semibold bg-purple-900/30 px-2 py-1 rounded">
+                                    <i className="fas fa-robot mr-1"></i>Bot
+                                </span>
+                            )}
                         </div>
                         <div className={`text-3xl font-mono px-6 py-3 rounded-xl shadow-lg transition-colors flex items-center space-x-2 ${
                             teams.w.timeRemaining < 60 
@@ -176,6 +188,16 @@ const GameUI: React.FC = () => {
                             <span>{formatTime(teams.b.timeRemaining)}</span>
                         </div>
                         <div className="flex items-center space-x-3">
+                            {gameMode === 'vs_bot' && playerColor === 'b' && (
+                                <span className="text-green-400 text-sm font-semibold bg-green-900/30 px-2 py-1 rounded">
+                                    <i className="fas fa-user mr-1"></i>You
+                                </span>
+                            )}
+                            {gameMode === 'vs_bot' && playerColor === 'w' && (
+                                <span className="text-purple-400 text-sm font-semibold bg-purple-900/30 px-2 py-1 rounded">
+                                    <i className="fas fa-robot mr-1"></i>Bot
+                                </span>
+                            )}
                             <span className="text-white font-bold text-xl">Black</span>
                             <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-600">
                                 <i className="fas fa-chess-king text-white text-xl"></i>
@@ -305,6 +327,25 @@ const GameUI: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Bot Thinking Indicator */}
+            {/* {botThinking && (
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] pointer-events-auto">
+                    <div className="bg-gradient-to-r from-purple-600/90 to-purple-800/90 backdrop-blur-md rounded-2xl p-6 border-4 border-purple-400 shadow-2xl text-center">
+                        <div className="text-4xl mb-3">
+                            <i className="fas fa-robot text-purple-300 animate-pulse"></i>
+                        </div>
+                        <h3 className="text-2xl font-bold text-white mb-2">
+                            Bot is thinking...
+                        </h3>
+                        <div className="flex justify-center space-x-1">
+                            <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                            <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                        </div>
+                    </div>
+                </div>
+            )} */}
 
             {/* Game Over Overlay */}
             {(status === GameStatus.CHECKMATE || status === GameStatus.STALEMATE || status === GameStatus.DRAW) && (
