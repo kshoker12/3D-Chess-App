@@ -1,11 +1,18 @@
-import React from 'react';
 import Piece from './Piece';
+import { Piece as PieceType } from '../types/boardTypes';
 
-const Team = ({ team }) => {
+interface TeamProps {
+	team: {
+		id: number;
+		pieces: PieceType[];
+	};
+}
+
+const Team = ({ team }: TeamProps) => {
 	return (
 		<>
-			{team.pieces.map((piece, index) => (
-				<Piece piece={piece} team={team.id} index={index} />
+			{team.pieces.map((piece: PieceType, index: number) => (
+				<Piece key={piece.id} piece={piece} squareId={`a${index + 1}` as any} />
 			))}
 		</>
 	);

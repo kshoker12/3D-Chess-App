@@ -1,4 +1,3 @@
-import React from 'react'
 import { selectSelectedSquare } from '../store/selectors/boardSelectors';
 import { useAppSelector } from '../store/hooks';
 

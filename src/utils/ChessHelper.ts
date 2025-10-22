@@ -1,5 +1,3 @@
-import { useGLTF } from '@react-three/drei';
-import * as THREE from 'three';
 import { Board, SquareId, PieceId, Piece } from '../types/boardTypes';
 import { Chess } from 'chess.js';
 import { placementToBoard } from './fen';
