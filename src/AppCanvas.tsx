@@ -16,7 +16,13 @@ const AppCanvas = () => {
 			{/* <Debug /> */}
 			<GameModeMenu />
 			<GameUI />
-			<Canvas style = {{height: '100vh', width: '100vw'}} gl={{ preserveDrawingBuffer: true }} camera={{ position: [0, 7, -7], fov: 60 }}>
+			<Canvas 
+				style = {{height: '100vh', width: '100vw'}} 
+				gl={{ preserveDrawingBuffer: true }} 
+				camera={{ position: [0, 7, -7], fov: 60 }}
+				dpr={[1, 2]}
+				performance={{ min: 0.5 }}
+			>
 				<Suspense fallback={null}>
 					<Stars />
 					<CameraController orbitRef={orbitRef} />
@@ -26,6 +32,13 @@ const AppCanvas = () => {
 						minPolarAngle={-Math.PI / 2}
 						minDistance={5}
 						maxDistance={20}
+						enablePan={true}
+						enableZoom={true}
+						enableRotate={true}
+						touches={{
+							ONE: 1,
+							TWO: 2
+						}}
 					/>
 					<ambientLight intensity={4} />
 					<directionalLight intensity={4} position={[0, 0, 10]} rotation={[0, Math.PI, 0]} />

@@ -34,6 +34,8 @@ body {
 	place-items: center;
 	min-width: 320px;
 	min-height: 100vh;
+	overflow-x: hidden;
+	touch-action: manipulation;
 }
 
 h1 {
@@ -58,6 +60,31 @@ button:hover {
 button:focus,
 button:focus-visible {
 	outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 1024px) {
+	body {
+		font-size: 14px;
+	}
+	
+	/* Improve touch targets */
+	button {
+		min-height: 44px;
+		min-width: 44px;
+	}
+	
+	/* Prevent zoom on input focus */
+	input, textarea, select {
+		font-size: 16px;
+	}
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+	body {
+		font-size: 12px;
+	}
 }
 
 @media (prefers-color-scheme: light) {

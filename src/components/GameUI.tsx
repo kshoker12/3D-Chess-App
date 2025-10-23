@@ -119,7 +119,7 @@ const GameUI: React.FC = () => {
 
     return (
         <div className="absolute inset-0 pointer-events-none z-10">
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-black/90 via-gray-900/90 to-black/90 backdrop-blur-md border-b border-gray-600 shadow-2xl">
+            <div className="hidden lg:block absolute top-0 left-0 right-0 bg-gradient-to-r from-black/90 via-gray-900/90 to-black/90 backdrop-blur-md border-b border-gray-600 shadow-2xl">
                 <div className="flex justify-between items-center p-4">
                     <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-3">
@@ -172,8 +172,6 @@ const GameUI: React.FC = () => {
                             </div>
                         </div>
                     </div>
-
-                    {/* Black Team Info */}
                     <div className="flex items-center space-x-4">
                         <div className="text-white font-semibold text-lg bg-gray-700/50 px-4 py-2 rounded-lg flex items-center space-x-2">
                             <i className="fas fa-trophy text-yellow-400"></i>
@@ -206,7 +204,111 @@ const GameUI: React.FC = () => {
                     </div>
                 </div>
             </div>
-            <div className="absolute left-4 top-28 bg-white/95 backdrop-blur-md rounded-xl p-5 border-2 border-gray-400 shadow-xl">
+            <div className="lg:hidden absolute top-0 left-0 right-0 bg-gradient-to-r from-black/90 via-gray-900/90 to-black/90 backdrop-blur-md border-b border-gray-600 shadow-2xl">
+                <div className="px-3 py-2">
+                    {(() => {
+                        const statusDisplay = getGameStatusDisplay();
+                        return (
+                            <div className={`font-bold text-lg mb-2 px-3 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${statusDisplay.color}`}>
+                                <i className={`fas ${statusDisplay.icon}`}></i>
+                                <span>{statusDisplay.text}</span>
+                            </div>
+                        );
+                    })()}
+                </div>
+
+                {/* Mobile Teams Row */}
+                <div className="flex justify-between items-center px-3 pb-2">
+                    {/* White Team */}
+                    <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-gray-300">
+                            <i className="fas fa-chess-king text-black text-sm"></i>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-white font-bold text-sm">White</span>
+                            {gameMode === 'vs_bot' && playerColor === 'w' && (
+                                <span className="text-green-400 text-xs font-semibold bg-green-900/30 px-1 py-0.5 rounded">
+                                    <i className="fas fa-user mr-1"></i>You
+                                </span>
+                            )}
+                            {gameMode === 'vs_bot' && playerColor === 'b' && (
+                                <span className="text-purple-400 text-xs font-semibold bg-purple-900/30 px-1 py-0.5 rounded">
+                                    <i className="fas fa-robot mr-1"></i>Bot
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Center Info */}
+                    <div className="flex flex-col items-center space-y-1">
+                        <div className="text-gray-300 text-sm font-semibold flex items-center space-x-1">
+                            <i className={`fas fa-chess-${fenParts.active === 'w' ? 'pawn' : 'pawn'} ${fenParts.active === 'w' ? 'text-white' : 'text-gray-700'}`}></i>
+                            <span>{fenParts.active === 'w' ? 'White' : 'Black'} to move</span>
+                        </div>
+                        <div className="font-bold text-sm flex items-center justify-center space-x-1">
+                            <i className="fas fa-chess-board text-blue-400"></i>
+                            <span>Move {Math.ceil(fenParts.fullmove)}</span>
+                        </div>
+                    </div>
+
+                    {/* Black Team */}
+                    <div className="flex items-center space-x-2">
+                        <div className="flex flex-col items-end">
+                            <span className="text-white font-bold text-sm">Black</span>
+                            {gameMode === 'vs_bot' && playerColor === 'b' && (
+                                <span className="text-green-400 text-xs font-semibold bg-green-900/30 px-1 py-0.5 rounded">
+                                    <i className="fas fa-user mr-1"></i>You
+                                </span>
+                            )}
+                            {gameMode === 'vs_bot' && playerColor === 'w' && (
+                                <span className="text-purple-400 text-xs font-semibold bg-purple-900/30 px-1 py-0.5 rounded">
+                                    <i className="fas fa-robot mr-1"></i>Bot
+                                </span>
+                            )}
+                        </div>
+                        <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-600">
+                            <i className="fas fa-chess-king text-white text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile Timers Row */}
+                <div className="flex justify-between items-center px-3 pb-3">
+                    {/* White Timer */}
+                    <div className={`text-xl font-mono px-3 py-2 rounded-lg shadow-lg transition-colors flex items-center space-x-1 ${
+                        teams.w.timeRemaining < 60 
+                            ? 'text-red-400 bg-red-900/50 border-2 border-red-500' 
+                            : 'text-white bg-gray-800 border-2 border-gray-600'
+                    }`}>
+                        <i className={`fas fa-clock text-sm ${teams.w.timeRemaining < 60 ? 'text-red-400' : 'text-gray-400'}`}></i>
+                        <span>{formatTime(teams.w.timeRemaining)}</span>
+                    </div>
+
+                    {/* Points Display */}
+                    <div className="flex space-x-2">
+                        <div className="text-white font-semibold text-sm bg-gray-700/50 px-2 py-1 rounded flex items-center space-x-1">
+                            <i className="fas fa-trophy text-yellow-400 text-xs"></i>
+                            <span>W: {teams.w.points}</span>
+                        </div>
+                        <div className="text-white font-semibold text-sm bg-gray-700/50 px-2 py-1 rounded flex items-center space-x-1">
+                            <i className="fas fa-trophy text-yellow-400 text-xs"></i>
+                            <span>B: {teams.b.points}</span>
+                        </div>
+                    </div>
+
+                    {/* Black Timer */}
+                    <div className={`text-xl font-mono px-3 py-2 rounded-lg shadow-lg transition-colors flex items-center space-x-1 ${
+                        teams.b.timeRemaining < 60 
+                            ? 'text-red-400 bg-red-900/50 border-2 border-red-500' 
+                            : 'text-white bg-gray-800 border-2 border-gray-600'
+                    }`}>
+                        <i className={`fas fa-clock text-sm ${teams.b.timeRemaining < 60 ? 'text-red-400' : 'text-gray-400'}`}></i>
+                        <span>{formatTime(teams.b.timeRemaining)}</span>
+                    </div>
+                </div>
+            </div>
+            {/* Desktop Captured Pieces */}
+            <div className="hidden lg:block absolute left-4 top-28 bg-white/95 backdrop-blur-md rounded-xl p-5 border-2 border-gray-400 shadow-xl">
                 <div className="flex items-center space-x-2 mb-3">
                     <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center border border-gray-300">
                         <i className="fas fa-chess-king text-black text-sm"></i>
@@ -241,7 +343,7 @@ const GameUI: React.FC = () => {
                     <span>Total Value: {teams.b.capturedPieces.reduce((sum, piece) => sum + PIECE_VALUE[piece], 0)} pts</span>
                 </div>
             </div>
-            <div className="absolute right-4 top-28 bg-gray-800/95 backdrop-blur-md rounded-xl p-5 border-2 border-gray-600 shadow-xl">
+            <div className="hidden lg:block absolute right-4 top-28 bg-gray-800/95 backdrop-blur-md rounded-xl p-5 border-2 border-gray-600 shadow-xl">
                 <div className="flex items-center space-x-2 mb-3">
                     <div className="text-white font-bold text-lg flex items-center space-x-2">
                         <i className="fas fa-capture text-red-500"></i>
@@ -276,7 +378,77 @@ const GameUI: React.FC = () => {
                     <span>Total Value: {teams.w.capturedPieces.reduce((sum, piece) => sum + PIECE_VALUE[piece], 0)} pts</span>
                 </div>
             </div>
-            <div className="absolute bottom-4 right-4 bg-black/90 backdrop-blur-md rounded-xl p-5 border-2 border-gray-600 shadow-xl">
+
+            {/* Mobile Captured Pieces - Bottom Panel */}
+            <div className="lg:hidden absolute bottom-20 left-2 right-2 bg-black/90 backdrop-blur-md rounded-xl p-3 border-2 border-gray-600 shadow-xl">
+                <div className="flex justify-between items-start">
+                    {/* White Captured */}
+                    <div className="flex-1 mr-2">
+                        <div className="flex items-center space-x-2 mb-2">
+                            <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center border border-gray-300">
+                                <i className="fas fa-chess-king text-black text-xs"></i>
+                            </div>
+                            <div className="text-white font-bold text-sm flex items-center space-x-1">
+                                <i className="fas fa-capture text-red-500 text-xs"></i>
+                                <span>White</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                            {teams.b.capturedPieces.map((piece, index) => (
+                                <div key={index} className="relative group">
+                                    <img
+                                        src={getPieceImageBlack(piece)}
+                                        alt={`Captured ${piece}`}
+                                        className="w-6 h-6 object-contain"
+                                    />
+                                </div>
+                            ))}
+                            {teams.b.capturedPieces.length === 0 && (
+                                <div className="text-gray-400 text-xs italic">
+                                    None
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-xs text-gray-300 font-semibold mt-1">
+                            {teams.b.capturedPieces.reduce((sum, piece) => sum + PIECE_VALUE[piece], 0)} pts
+                        </div>
+                    </div>
+
+                    {/* Black Captured */}
+                    <div className="flex-1 ml-2">
+                        <div className="flex items-center space-x-2 mb-2">
+                            <div className="text-white font-bold text-sm flex items-center space-x-1">
+                                <i className="fas fa-capture text-red-500 text-xs"></i>
+                                <span>Black</span>
+                            </div>
+                            <div className="w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center border border-gray-600">
+                                <i className="fas fa-chess-king text-white text-xs"></i>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                            {teams.w.capturedPieces.map((piece, index) => (
+                                <div key={index} className="relative group">
+                                    <img
+                                        src={getPieceImage(piece)}
+                                        alt={`Captured ${piece}`}
+                                        className="w-6 h-6 object-contain"
+                                    />
+                                </div>
+                            ))}
+                            {teams.w.capturedPieces.length === 0 && (
+                                <div className="text-gray-400 text-xs italic">
+                                    None
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-xs text-gray-300 font-semibold mt-1">
+                            {teams.w.capturedPieces.reduce((sum, piece) => sum + PIECE_VALUE[piece], 0)} pts
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {/* Desktop Game Controls */}
+            <div className="hidden lg:block absolute bottom-4 right-4 bg-black/90 backdrop-blur-md rounded-xl p-5 border-2 border-gray-600 shadow-xl">
                 <div className="flex flex-col space-y-3">
                     <div className="text-white font-bold text-lg mb-2 flex items-center space-x-2">
                         <i className="fas fa-gamepad"></i>
@@ -305,8 +477,30 @@ const GameUI: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Game Controls */}
+            <div className="lg:hidden absolute bottom-2 right-2 bg-black/90 backdrop-blur-md rounded-xl p-3 border-2 border-gray-600 shadow-xl">
+                <button
+                    onClick={() => {
+                        if (gameStarted) {
+                            dispatch(pauseGame());
+                        } else {
+                            dispatch(startGame());
+                        }
+                    }}
+                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-all duration-200 pointer-events-auto shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center space-x-2 ${
+                        gameStarted 
+                            ? 'bg-red-600 hover:bg-red-700 text-white border-2 border-red-500' 
+                            : 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-500'
+                    }`}
+                >
+                    <i className={`fas ${gameStarted ? 'fa-pause' : 'fa-play'} text-sm`}></i>
+                    <span>{gameStarted ? 'Pause' : 'Resume'}</span>
+                </button>
+            </div>
+            {/* Desktop Active Player Indicator */}
             {gameStarted && (
-                <div className={`absolute bottom-4 left-4 backdrop-blur-md rounded-xl p-5 border-2 shadow-xl transition-all duration-300 ${
+                <div className={`hidden lg:block absolute bottom-4 left-4 backdrop-blur-md rounded-xl p-5 border-2 shadow-xl transition-all duration-300 ${
                     fenParts.active === 'w' 
                         ? 'bg-gradient-to-r from-blue-600/90 to-blue-800/90 border-blue-400' 
                         : 'bg-gradient-to-r from-purple-600/90 to-purple-800/90 border-purple-400'
@@ -324,6 +518,26 @@ const GameUI: React.FC = () => {
                     <div className="text-gray-200 text-sm mt-1 flex items-center space-x-1">
                         <i className="fas fa-stopwatch text-green-400"></i>
                         <span>Timer is running...</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Mobile Active Player Indicator */}
+            {gameStarted && (
+                <div className={`lg:hidden absolute bottom-2 left-2 backdrop-blur-md rounded-xl p-3 border-2 shadow-xl transition-all duration-300 ${
+                    fenParts.active === 'w' 
+                        ? 'bg-gradient-to-r from-blue-600/90 to-blue-800/90 border-blue-400' 
+                        : 'bg-gradient-to-r from-purple-600/90 to-purple-800/90 border-purple-400'
+                }`}>
+                    <div className="flex items-center space-x-2">
+                        <div className={`w-5 h-5 rounded-full border-2 border-white shadow-lg flex items-center justify-center ${
+                            fenParts.active === 'w' ? 'bg-white' : 'bg-gray-800'
+                        }`}>
+                            <i className={`fas fa-chess-${fenParts.active === 'w' ? 'pawn' : 'pawn'} ${fenParts.active === 'w' ? 'text-gray-800' : 'text-white'} text-xs`}></i>
+                        </div>
+                        <span className="text-white font-bold text-sm">
+                            {fenParts.active === 'w' ? 'White' : 'Black'} to move
+                        </span>
                     </div>
                 </div>
             )}
@@ -350,32 +564,32 @@ const GameUI: React.FC = () => {
             {/* Game Over Overlay */}
             {(status === GameStatus.CHECKMATE || status === GameStatus.STALEMATE || status === GameStatus.DRAW) && (
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] pointer-events-auto">
-                    <div className={`${getGameStatusDisplay().bgColor} backdrop-blur-md rounded-2xl p-8 border-4 shadow-2xl text-center max-w-md mx-4`}>
-                        <div className="text-6xl mb-4">
+                    <div className={`${getGameStatusDisplay().bgColor} backdrop-blur-md rounded-2xl p-6 lg:p-8 border-4 shadow-2xl text-center max-w-sm lg:max-w-md mx-4`}>
+                        <div className="text-4xl lg:text-6xl mb-3 lg:mb-4">
                             <i className={`fas ${getGameStatusDisplay().icon} ${status === GameStatus.CHECKMATE ? 'text-yellow-400' : 'text-gray-400'}`}></i>
                         </div>
-                        <h2 className="text-4xl font-bold text-white mb-4">
+                        <h2 className="text-2xl lg:text-4xl font-bold text-white mb-3 lg:mb-4">
                             {getGameStatusDisplay().text}
                         </h2>
                         {status === GameStatus.CHECKMATE && (
-                            <p className="text-gray-300 text-lg mb-6">
+                            <p className="text-gray-300 text-base lg:text-lg mb-4 lg:mb-6">
                                 {fenParts.active === 'w' ? 'Black' : 'White'} has achieved checkmate!
                             </p>
                         )}
                         {status === GameStatus.STALEMATE && (
-                            <p className="text-gray-300 text-lg mb-6">
+                            <p className="text-gray-300 text-base lg:text-lg mb-4 lg:mb-6">
                                 The game ends in a draw due to stalemate.
                             </p>
                         )}
                         {status === GameStatus.DRAW && (
-                            <p className="text-gray-300 text-lg mb-6">
+                            <p className="text-gray-300 text-base lg:text-lg mb-4 lg:mb-6">
                                 The game ends in a draw.
                             </p>
                         )}
                         <div className="flex justify-center space-x-4">
                             <button
                                 onClick={handleNewGame}
-                                className="cursor-pointer px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors"
+                                className="cursor-pointer px-4 py-2 lg:px-6 lg:py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-sm lg:text-base"
                             >
                                 <i className="fas fa-redo mr-2"></i>
                                 New Game
