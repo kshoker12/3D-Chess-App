@@ -30,6 +30,12 @@ const Square: FC<SquareProps> = memo(({squareId, texture, wood, white}) => {
     // Only subscribe to selectors that are relevant to this specific square
     const isSelected = useAppSelector(squareSelectors.isSelected);
     const isLegal = useAppSelector(squareSelectors.isLegal);
+    const lastMove = useAppSelector(state => state.board.lastMove);
+    
+    // Check if this square is part of the last move
+    const isLastMoveSquare = useMemo(() => {
+        return lastMove && (lastMove.from === squareId || lastMove.to === squareId);
+    }, [lastMove, squareId]);
 
     // Memoize position calculations
     const x = useMemo(() => fileToNumber(squareId.charAt(0)), [squareId]);
@@ -54,9 +60,17 @@ const Square: FC<SquareProps> = memo(({squareId, texture, wood, white}) => {
             }
         }
         
+        // Get the piece on this square if any
+        const squarePiece = currentState.board.board[squareId];
+        const activeColor = currentState.ui.fenParts.active;
+        
         if (selectedSquare === squareId) {
             dispatch(setSelectedSquare(null));
         } else if (selectedSquare === null) {
+            // Don't allow selecting squares with enemy pieces
+            if (squarePiece && squarePiece.pieceId.charAt(0) !== activeColor) {
+                return; // Enemy piece, don't select
+            }
             dispatch(setSelectedSquare(squareId));
         } else {
             const move: Move = { from: selectedSquare as SquareId, to: squareId as SquareId };
@@ -74,13 +88,19 @@ const Square: FC<SquareProps> = memo(({squareId, texture, wood, white}) => {
                 <meshStandardMaterial color={'grey'} attach={'material-0'} map={wood} />
                 <meshStandardMaterial color={'grey'} attach={'material-1'} map={wood} />
                 <meshStandardMaterial 
-                    color={isSelected ? 'lime' : 'white'} attach={'material-2'} 
+                    color={
+                        isSelected ? 'lime' : 
+                        isLastMoveSquare ? '#fef08a' : 
+                        'white'
+                    } 
+                    attach={'material-2'} 
                     map={isSelected ? white : texture} 
                 />
                 <meshStandardMaterial color={'grey'} attach={'material-3'} map={wood} />
                 <meshStandardMaterial color={'grey'} attach={'material-4'} map={wood} />
                 <meshStandardMaterial color={'grey'} attach={'material-5'} map={wood} />
                 {isLegal && <Outlines color="lime" scale={1} thickness={0.1} />}
+                {isLastMoveSquare && <Outlines color="#fcd34d" scale={1} thickness={0.15} />}
             </Box>
             
             {/* Chess.com style circle indicator for legal moves */}

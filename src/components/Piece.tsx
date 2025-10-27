@@ -10,6 +10,7 @@ import { setSelectedSquare, setMovingPiece } from '../store/slices/boardSlice';
 import { Move } from '../types/gameTypes';
 import { makeMove } from '../store/slices/gameSlice';
 import { Piece as PieceType } from '../types/boardTypes';
+import { GameMode } from '../types/uiTypes';
 import * as THREE from 'three';
 
 export interface PieceProps {
@@ -100,12 +101,31 @@ const Piece: FC<PieceProps> = memo(({ piece, squareId }) => {
 		// Get current state at click time instead of subscribing to it
 		const currentState = store.getState();
 		const selectedSquare = currentState.board.selectedSquare;
+		const activeColor = currentState.ui.fenParts.active;
+		const pieceOnSquare = currentState.board.board[squareId];
+		
+		// Check game mode restrictions
+		if (currentState.ui.gameMode === GameMode.VS_BOT) {
+			// In vs-bot mode, check if it's the user's turn
+			if (activeColor !== currentState.ui.playerColor) {
+				return; // Not user's turn, ignore click
+			}
+			// Check if bot is thinking
+			if (currentState.ui.botThinking) {
+				return; // Bot is thinking, ignore click
+			}
+		}
 		
 		if (selectedSquare === squareId) {
 			dispatch(setSelectedSquare(null));
 		} else if (selectedSquare === null) {
+			// Only allow selecting own pieces (when selecting for the first time)
+			if (pieceOnSquare && pieceOnSquare.pieceId.charAt(0) !== activeColor) {
+				return; // Enemy piece, don't select
+			}
 			dispatch(setSelectedSquare(squareId));
 		} else {
+			// When making a move, allow moving to any square (including captures)
 			const move: Move = { from: selectedSquare as SquareId, to: squareId as SquareId };
 			dispatch(makeMove(move));
 		}
