@@ -7,6 +7,8 @@ export enum GameMode {
 
 export type PlayerColor = 'w' | 'b' | null;
 
+export type BotDifficulty = 'easy' | 'medium' | 'hard';
+
 export interface Team {
     color: 'white' | 'black';
     points: number;
@@ -55,6 +57,7 @@ export interface UIState {
     timerInterval: NodeJS.Timeout | null;
     gameMode: GameMode | null;
     playerColor: PlayerColor;
+    botDifficulty: BotDifficulty;
     showGameModeMenu: boolean;
     botThinking: boolean;
 }

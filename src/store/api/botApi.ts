@@ -1,8 +1,10 @@
 import axios from 'axios';
+import { BotDifficulty } from '../../types/uiTypes';
 
 export interface MoveRequest {
     fen: string;
     max_depth: number;
+    difficulty: string;
 }
 
 export interface MoveResponse {
@@ -10,10 +12,18 @@ export interface MoveResponse {
     score_cp: number;
 }
 
-export const fetchBotMove = async (fen: string, maxDepth: number = 5): Promise<MoveResponse> => {
+// Map difficulty to max_depth
+const difficultyToDepth: Record<BotDifficulty, number> = {
+    'easy': 8,
+    'medium': 8,
+    'hard': 8
+};
+
+export const fetchBotMove = async (fen: string, difficulty: BotDifficulty = 'medium'): Promise<MoveResponse> => {
     const requestBody: MoveRequest = {
         fen,
-        max_depth: maxDepth
+        max_depth: difficultyToDepth[difficulty],
+        difficulty
     };
 
     try {

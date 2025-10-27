@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { FenParts, PIECE_VALUE, UIState, GameMode } from "../../types/uiTypes";
+import { FenParts, PIECE_VALUE, UIState, GameMode, BotDifficulty } from "../../types/uiTypes";
 import { parseFen, START_FEN } from "../../utils/fen";
 import { PieceType } from "../../types/boardTypes";
 
@@ -23,6 +23,7 @@ const initialState: UIState = {
     timerInterval: null,
     gameMode: null,
     playerColor: null,
+    botDifficulty: 'medium',
     showGameModeMenu: true,
     botThinking: false,
 }
@@ -48,6 +49,7 @@ const uiSlice = createSlice({
                 showGameModeMenu: true,
                 gameMode: null,
                 playerColor: null,
+                botDifficulty: 'medium' as BotDifficulty,
             };
         },
         startGame: (state) => {
@@ -80,9 +82,12 @@ const uiSlice = createSlice({
         },
         setBotThinking: (state, action: PayloadAction<boolean>) => {
             state.botThinking = action.payload;
+        },
+        setBotDifficulty: (state, action: PayloadAction<BotDifficulty>) => {
+            state.botDifficulty = action.payload;
         }
     }
 });
 
-export const { setFenParts, capturePiece, resetUI, startGame, pauseGame, decrementTimer, resetTimers, setTimerInterval, setGameMode, setPlayerColor, setShowGameModeMenu, setBotThinking } = uiSlice.actions;
+export const { setFenParts, capturePiece, resetUI, startGame, pauseGame, decrementTimer, resetTimers, setTimerInterval, setGameMode, setPlayerColor, setBotDifficulty, setShowGameModeMenu, setBotThinking } = uiSlice.actions;
 export default uiSlice.reducer;

@@ -105,7 +105,8 @@ export const makeBotMove = createAsyncThunk<
         dispatch(setBotThinking(true));
         
         const currentFen = getState().game.history[getState().game.history.length - 1];
-        botResponse = await fetchBotMove(currentFen);
+        const botDifficulty = getState().ui.botDifficulty || 'medium';
+        botResponse = await fetchBotMove(currentFen, botDifficulty);
         
         // Parse move string (e.g., "e2e4" or "e7e8q" for promotion)
         const moveString = botResponse.best_move;

@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { useAppDispatch } from '../store/hooks';
-import { setGameMode, setPlayerColor, setShowGameModeMenu } from '../store/slices/uiSlice';
-import { GameMode } from '../types/uiTypes';
+import { setGameMode, setPlayerColor, setBotDifficulty, setShowGameModeMenu } from '../store/slices/uiSlice';
+import { GameMode, BotDifficulty } from '../types/uiTypes';
 import { makeBotMove } from '../store/slices/gameSlice';
 
 const GameModeMenu: React.FC = () => {
     const dispatch = useAppDispatch();
     const { showGameModeMenu } = useSelector((state: RootState) => state.ui);
     const [showColorSelection, setShowColorSelection] = useState(false);
+    const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>('medium');
 
     if (!showGameModeMenu) return null;
 
@@ -23,6 +24,8 @@ const GameModeMenu: React.FC = () => {
     };
 
     const handleColorSelection = (color: 'w' | 'b') => {
+        // Set bot difficulty before starting the game
+        dispatch(setBotDifficulty(selectedDifficulty));
         dispatch(setPlayerColor(color));
         dispatch(setGameMode(GameMode.VS_BOT));
         dispatch(setShowGameModeMenu(false));
@@ -80,10 +83,54 @@ const GameModeMenu: React.FC = () => {
                         <div className="text-4xl lg:text-6xl mb-3 lg:mb-4">
                             <i className="fas fa-robot text-purple-400"></i>
                         </div>
-                        <h2 className="text-2xl lg:text-4xl font-bold text-white mb-4 lg:mb-6">
-                            Choose Your Color
+                        <h2 className="text-2xl lg:text-4xl font-bold text-white mb-3 lg:mb-4">
+                            Choose Bot Difficulty
                         </h2>
-                        <p className="text-gray-300 text-base lg:text-lg mb-6 lg:mb-8">
+                        <p className="text-gray-300 text-sm lg:text-base mb-4">
+                            Select how challenging the bot should be
+                        </p>
+                        <div className="flex flex-col space-y-2 mb-4 lg:mb-6">
+                            <button
+                                onClick={() => setSelectedDifficulty('easy')}
+                                className={`px-6 py-2 lg:py-3 rounded-lg font-bold text-base lg:text-lg transition-colors flex items-center justify-center space-x-2 ${
+                                    selectedDifficulty === 'easy'
+                                        ? 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-400'
+                                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-2 border-gray-600'
+                                }`}
+                            >
+                                <i className="fas fa-baby"></i>
+                                <span>Easy</span>
+                            </button>
+                            <button
+                                onClick={() => setSelectedDifficulty('medium')}
+                                className={`px-6 py-2 lg:py-3 rounded-lg font-bold text-base lg:text-lg transition-colors flex items-center justify-center space-x-2 ${
+                                    selectedDifficulty === 'medium'
+                                        ? 'bg-yellow-600 hover:bg-yellow-700 text-white border-2 border-yellow-400'
+                                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-2 border-gray-600'
+                                }`}
+                            >
+                                <i className="fas fa-user"></i>
+                                <span>Medium</span>
+                            </button>
+                            <button
+                                onClick={() => setSelectedDifficulty('hard')}
+                                className={`px-6 py-2 lg:py-3 rounded-lg font-bold text-base lg:text-lg transition-colors flex items-center justify-center space-x-2 ${
+                                    selectedDifficulty === 'hard'
+                                        ? 'bg-red-600 hover:bg-red-700 text-white border-2 border-red-400'
+                                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-2 border-gray-600'
+                                }`}
+                            >
+                                <i className="fas fa-brain"></i>
+                                <span>Hard</span>
+                            </button>
+                        </div>
+                        <div className="mb-3 lg:mb-4">
+                            <div className="h-px bg-gray-600"></div>
+                        </div>
+                        <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 lg:mb-4">
+                            Choose Your Color
+                        </h3>
+                        <p className="text-gray-300 text-sm lg:text-base mb-4 lg:mb-6">
                             Select which color you want to play as
                         </p>
                         <div className="flex flex-col space-y-3 lg:space-y-4">
