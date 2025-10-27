@@ -35,10 +35,10 @@ const AppCanvas = () => {
 						enablePan={true}
 						enableZoom={true}
 						enableRotate={true}
-						touches={{
-							ONE: 1,
-							TWO: 2
-						}}
+						// touches={{
+						// 	ONE: 1,
+						// 	TWO: 2
+						// }}
 					/>
 					<ambientLight intensity={4} />
 					<directionalLight intensity={4} position={[0, 0, 10]} rotation={[0, Math.PI, 0]} />
