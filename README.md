@@ -22,11 +22,14 @@ A production-grade 3D chess application built with modern web technologies, feat
 ### Key Features
 - 🎮 **Real-time 3D chess board** with physics-based piece animations
 - 🤖 **AI vs Human gameplay** with neural network-powered chess engine
+  - **Adjustable difficulty levels**: Easy, Medium, and Hard bot settings
+  - **Customizable AI strength** with configurable search depth
 - 👥 **Pass-and-play mode** for local multiplayer
 - ✅ **Legal move validation** with visual highlighting
 - 📊 **Move history tracking** and game state management
 - ⏱️ **Timer system** with checkmate/stalemate detection
 - ♟️ **Complete chess rules** including promotion, castling, and en passant
+- 📱 **Responsive design** optimized for desktop and mobile devices
 
 ### Performance Optimizations
 - **Memoized components** preventing unnecessary re-renders
@@ -34,11 +37,31 @@ A production-grade 3D chess application built with modern web technologies, feat
 - **Lazy loading** and code splitting for optimal bundle size
 - **Spring-based animations** with React Spring for smooth transitions
 
+## 🎮 Gameplay Modes
+
+### Pass & Play Mode
+- **Two players** take turns on the same device
+- Perfect for local multiplayer games
+- Real-time timer for each player
+- Full chess rules support
+
+### VS Bot Mode
+- **Challenge AI opponent** with adjustable difficulty
+- **Difficulty Selection**:
+  - **Easy**: Beginner-friendly gameplay
+  - **Medium**: Balanced challenge (default)
+  - **Hard**: Advanced difficulty for experienced players
+- **Color Selection**: Choose to play as White or Black
+- Bot automatically makes first move if you choose Black
+- Real-time game state updates
+
 ## 🔗 Backend Integration
 
 Seamlessly integrated with a custom neural chess engine featuring:
 - **RESTful API** communication with environment-based configuration
 - **Axios HTTP client** with comprehensive error handling
+- **Adjustable AI difficulty** via `difficulty` parameter (easy/medium/hard)
+- **Configurable search depth** with `max_depth` parameter
 - **Hybrid AI evaluation** combining neural networks with classical algorithms
 - **Serverless deployment** on AWS Lambda with ARM64 optimization
 
@@ -121,8 +144,10 @@ src/
 ├── components/          # React components
 │   ├── Board.tsx       # 3D chess board
 │   ├── Piece.tsx       # Individual chess pieces
-│   ├── GameUI.tsx      # Game interface
-│   └── GameModeMenu.tsx # Game mode selection
+│   ├── GameUI.tsx      # Game interface with responsive design
+│   ├── GameModeMenu.tsx # Game mode & difficulty selection
+│   ├── Square.tsx      # Chess board squares
+│   └── Table.tsx       # 3D table environment
 ├── store/              # Redux store
 │   ├── slices/         # Redux slices
 │   ├── selectors/      # Optimized selectors
@@ -133,9 +158,9 @@ src/
 ```
 
 ### Redux Store Structure
-- **boardSlice**: Board state, piece positions, legal moves
+- **boardSlice**: Board state, piece positions, legal moves, last move tracking
 - **gameSlice**: Game history, move validation, AI integration
-- **uiSlice**: UI state, timers, game modes, player settings
+- **uiSlice**: UI state, timers, game modes, player settings, bot difficulty selection
 
 ### Helper Utilities
 - **ChessHelper**: Board creation, move application, legal move generation
