@@ -26,4 +26,5 @@ export interface GameState {
     history: string[];
     playIndex: number;
     status: GameStatus;
+    pgn: string;
 }

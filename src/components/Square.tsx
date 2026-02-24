@@ -82,7 +82,7 @@ const Square: FC<SquareProps> = memo(({squareId, texture, wood, white}) => {
         <>
             <Box 
                 args={[1, 0.4, 1]} 
-                position={[x - 4, -0.6, y - 4]}
+                position={[3 - x, -0.6, y - 4]}
                 onClick={handleClick}
             >
                 <meshStandardMaterial color={'grey'} attach={'material-0'} map={wood} />
@@ -107,7 +107,7 @@ const Square: FC<SquareProps> = memo(({squareId, texture, wood, white}) => {
             {isLegal && (
                 <Circle 
                     args={[0.2, 32]} 
-                    position={[x - 4, -0.3, y - 4]}
+                    position={[3 - x, -0.3, y - 4]}
                     rotation={[-Math.PI / 2, 0, 0]}
                 >
                     <meshStandardMaterial color="#666666" transparent opacity={0.6} />
@@ -118,7 +118,7 @@ const Square: FC<SquareProps> = memo(({squareId, texture, wood, white}) => {
             {isLegal && (
                 <Circle 
                     args={[0.4, 32]} 
-                    position={[x - 4, -0.5, y - 4]}
+                    position={[3 - x, -0.5, y - 4]}
                     rotation={[-Math.PI / 2, 0, 0]}
                 >
                     <meshStandardMaterial color="#ff0000" transparent opacity={0.3} />

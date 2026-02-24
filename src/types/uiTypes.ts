@@ -45,7 +45,6 @@ export const PIECE_VALUE: PieceMap = {
  * @property playerColor - User's color in vs-bot mode
  * @property showGameModeMenu - Controls menu visibility
  * @property botThinking - Loading state during bot move
- * 
  */
 export interface UIState {
     fenParts: FenParts;
@@ -60,4 +59,5 @@ export interface UIState {
     botDifficulty: BotDifficulty;
     showGameModeMenu: boolean;
     botThinking: boolean;
+    isAutomated: boolean;
 }

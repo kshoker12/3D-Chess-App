@@ -14,20 +14,25 @@ const initialState: GameState = {
     history: [START_FEN],
     playIndex: 0,
     status: GameStatus.PLAYING,
+    pgn: new Chess().pgn(),
 }
 
 export const makeMove = createAsyncThunk<
-    {status: GameStatus; fen: string},
+    {status: GameStatus; fen: string; pgn: string},
     Move,
     { state: RootState, dispatch: AppDispatch }
 >('game/makeMove', (move, {dispatch, getState }) => {
     const currentFen = getState().game.history[getState().game.history.length - 1];
+    const currentPgn = getState().game.pgn;
     // Make move only if move to square is not occupied by the active team
     if (getState().board.board[move.to]?.pieceId.charAt(0) === getState().ui.fenParts.active) {
         dispatch(setSelectedSquare(move.to));
-        return {status: GameStatus.ERROR, fen: getState().game.history[getState().game.history.length - 1]};
+        return {status: GameStatus.ERROR, fen: getState().game.history[getState().game.history.length - 1], pgn: currentPgn};
     } else {
         const chess = new Chess(currentFen);
+        if (currentPgn) {
+            chess.loadPgn(currentPgn);
+        }
         try {
             let result;
             // Try the move first without promotion
@@ -87,16 +92,17 @@ export const makeMove = createAsyncThunk<
                 dispatch(startGame());
             }
             
-            return {status: gameStatus, fen: newFen};
+            const newPgn = chess.pgn();
+            return {status: gameStatus, fen: newFen, pgn: newPgn};
         } catch (error) {
             dispatch(setSelectedSquare(null));
-            return {status: GameStatus.ERROR, fen: currentFen};
+            return {status: GameStatus.ERROR, fen: currentFen, pgn: currentPgn};
         }    
     }
 })
 
 export const makeBotMove = createAsyncThunk<
-    {status: GameStatus; fen: string},
+    {status: GameStatus; fen: string; pgn: string},
     void,
     { state: RootState, dispatch: AppDispatch }
 >('game/makeBotMove', async (_, {dispatch, getState}) => {
@@ -105,8 +111,23 @@ export const makeBotMove = createAsyncThunk<
         dispatch(setBotThinking(true));
         
         const currentFen = getState().game.history[getState().game.history.length - 1];
+        const currentPgn = getState().game.pgn;
         const botDifficulty = getState().ui.botDifficulty || 'medium';
-        botResponse = await fetchBotMove(currentFen, botDifficulty);
+        const isAutomated = getState().ui.isAutomated;
+        const activeColor = getState().ui.fenParts.active;
+
+        let agent: number | undefined = undefined;
+        if (isAutomated) {
+            // If automated, set agent based on active color
+            agent = activeColor === 'w' ? 0 : 1;
+            console.log(`[Automated] Making move for ${activeColor} (Agent ${agent})`);
+        } else {
+             console.log(`[Bot] Making move for ${activeColor}`);
+        }
+
+        console.log(`[Bot] Fetching move... Status: ${getState().game.status}, Difficulty: ${botDifficulty}`);
+        botResponse = await fetchBotMove(currentFen, botDifficulty, currentPgn, agent);
+        console.log(`[Bot] Received response:`, botResponse);
         
         // Parse move string (e.g., "e2e4" or "e7e8q" for promotion)
         const moveString = botResponse.best_move;
@@ -125,8 +146,10 @@ export const makeBotMove = createAsyncThunk<
             move.promotion = promotionPiece as any;
         }
         
+        console.log(`[Bot] Dispatching move:`, move);
         // Dispatch the move using existing makeMove logic
         const result = await dispatch(makeMove(move));
+        console.log(`[Bot] Move dispatched. Result:`, result.meta.requestStatus);
         
         dispatch(setBotThinking(false));
         
@@ -135,7 +158,7 @@ export const makeBotMove = createAsyncThunk<
             throw new Error(`Move execution failed: ${result.payload}`);
         }
         
-        return result.payload as {status: GameStatus; fen: string};
+        return result.payload as {status: GameStatus; fen: string; pgn: string};
     } catch (error) {
         dispatch(setBotThinking(false));
         console.error('Bot move failed:', error);
@@ -147,7 +170,8 @@ export const makeBotMove = createAsyncThunk<
         
         // Return current state on error
         const currentFen = getState().game.history[getState().game.history.length - 1];
-        return {status: GameStatus.PLAYING, fen: currentFen};
+        const currentPgn = getState().game.pgn;
+        return {status: GameStatus.PLAYING, fen: currentFen, pgn: currentPgn};
     }
 });
 
@@ -159,6 +183,7 @@ const gameSlice = createSlice({
             state.history = [START_FEN];
             state.playIndex = 0;
             state.status = GameStatus.PLAYING;
+            state.pgn = new Chess().pgn();
         },
         prevMove: (state) => {
             state.playIndex = Math.max(state.playIndex - 1, 0);
@@ -175,6 +200,7 @@ const gameSlice = createSlice({
             state.history.push(action.payload.fen);
             state.playIndex = state.history.length - 1;
             state.status = action.payload.status;
+            state.pgn = action.payload.pgn;
         });
         builder.addCase(makeMove.rejected, (state) => {
             state.status = GameStatus.PLAYING;

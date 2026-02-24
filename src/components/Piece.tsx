@@ -1,4 +1,4 @@
-import React, { FC, useMemo, memo } from 'react';
+import React, { FC, useMemo, memo, useEffect } from 'react';
 import { useSpring, a } from '@react-spring/three';
 import { useGLTF } from '@react-three/drei';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -65,7 +65,7 @@ const Piece: FC<PieceProps> = memo(({ piece, squareId }) => {
 		if (model.children && model.children[0]) {
 			const child = model.children[0] as any;
 			if (child.material) {
-				child.material.color = new THREE.Color(color === 'w' ? 'white' : 0x555555);
+				child.material.color = new THREE.Color(color === 'w' ? 'white' : 0x777777);
 			}
 		}
 		
@@ -90,7 +90,7 @@ const Piece: FC<PieceProps> = memo(({ piece, squareId }) => {
 			const fromX = fileToNumber(relevantLastMove.from.charAt(0));
 			const chessRank = parseInt(relevantLastMove.from.charAt(1)); // FEN rank (1-8)
 			const arrayRank = 8 - chessRank; // Convert to array rank
-			return [fromX - 4, -0.4, (7 - arrayRank) - 4] as [number, number, number];
+			return [3 - fromX, -0.4, (7 - arrayRank) - 4] as [number, number, number];
 		}
 		return currentPosition;
 	}, [relevantLastMove, isMoving, currentPosition]);
@@ -131,30 +131,46 @@ const Piece: FC<PieceProps> = memo(({ piece, squareId }) => {
 		}
 	}, [squareId, dispatch]);
 
-	const { position } = isKnight 
-		? useSpring({
-			from: { position: shouldAnimate ? prevPosition : currentPosition },
-			to: async (next) => {
-				if (shouldAnimate) {
+	const [knightSpring, knightApi] = useSpring(() => ({
+		position: currentPosition,
+		config: { tension: 250, friction: 26 },
+	}));
+
+	// Snap knight to currentPosition immediately when not animating (e.g. after game reset)
+	useEffect(() => {
+		if (isKnight && !shouldAnimate) {
+			knightApi.set({ position: currentPosition });
+		}
+	}, [isKnight, shouldAnimate, currentPosition, knightApi]);
+
+	// Trigger the knight jump animation when a move happens
+	useEffect(() => {
+		if (isKnight && shouldAnimate) {
+			knightApi.start({
+				to: async (next) => {
 					await next({ position: [currentPosition[0], peakHeight, currentPosition[2]] });
 					await next({ position: currentPosition });
 					dispatch(setSelectedSquare(null));
 					dispatch(setMovingPiece(null));
-				}
-			},
-			config: { tension: 250, friction: 26 },
-		})
-		: useSpring({
-			position: currentPosition,
-			config: { tension: 170, friction: 26 },
-			immediate: !shouldAnimate,
-			onRest: () => {
-				if (shouldAnimate) {
-					dispatch(setSelectedSquare(null));
-					dispatch(setMovingPiece(null));
-				}
-			},
-		});
+				},
+				from: { position: prevPosition },
+			});
+		}
+	}, [isKnight, shouldAnimate, prevPosition, currentPosition, peakHeight, knightApi, dispatch]);
+
+	const { position: nonKnightPosition } = useSpring({
+		position: currentPosition,
+		config: { tension: 170, friction: 26 },
+		immediate: !shouldAnimate,
+		onRest: () => {
+			if (!isKnight && shouldAnimate) {
+				dispatch(setSelectedSquare(null));
+				dispatch(setMovingPiece(null));
+			}
+		},
+	});
+
+	const { position } = isKnight ? knightSpring : { position: nonKnightPosition };
 
 	return (
 		<a.mesh position={position as any}>

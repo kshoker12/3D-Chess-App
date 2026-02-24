@@ -26,6 +26,7 @@ const initialState: UIState = {
     botDifficulty: 'medium',
     showGameModeMenu: true,
     botThinking: false,
+    isAutomated: false,
 }
 
 const uiSlice = createSlice({
@@ -50,6 +51,7 @@ const uiSlice = createSlice({
                 gameMode: null,
                 playerColor: null,
                 botDifficulty: 'medium' as BotDifficulty,
+                isAutomated: false,
             };
         },
         startGame: (state) => {
@@ -85,9 +87,12 @@ const uiSlice = createSlice({
         },
         setBotDifficulty: (state, action: PayloadAction<BotDifficulty>) => {
             state.botDifficulty = action.payload;
+        },
+        setIsAutomated: (state, action: PayloadAction<boolean>) => {
+            state.isAutomated = action.payload;
         }
     }
 });
 
-export const { setFenParts, capturePiece, resetUI, startGame, pauseGame, decrementTimer, resetTimers, setTimerInterval, setGameMode, setPlayerColor, setBotDifficulty, setShowGameModeMenu, setBotThinking } = uiSlice.actions;
+export const { setFenParts, capturePiece, resetUI, startGame, pauseGame, decrementTimer, resetTimers, setTimerInterval, setGameMode, setPlayerColor, setBotDifficulty, setShowGameModeMenu, setBotThinking, setIsAutomated } = uiSlice.actions;
 export default uiSlice.reducer;

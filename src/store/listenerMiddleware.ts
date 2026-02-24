@@ -38,14 +38,20 @@ listenerMiddleware.startListening.withTypes<RootState, AppDispatch>()({
 
 // Listen for bot turns after moves are completed
 listenerMiddleware.startListening.withTypes<RootState, AppDispatch>()({
-	matcher: makeMove.fulfilled.match,
+	matcher: isAnyOf(makeMove.fulfilled, makeBotMove.fulfilled),
 	effect: async (_action, listenerApi) => {
 		const state = listenerApi.getState();
 		
+
+        const isVsBotTurn = state.ui.gameMode === GameMode.VS_BOT &&
+			state.ui.fenParts.active !== state.ui.playerColor;
+            
+        const isAutomatedTurn = state.ui.gameMode === GameMode.PASS_AND_PLAY &&
+            state.ui.isAutomated;
+		
 		// Check if we should trigger bot move
 		if (
-			state.ui.gameMode === GameMode.VS_BOT &&
-			state.ui.fenParts.active !== state.ui.playerColor &&
+			(isVsBotTurn || isAutomatedTurn) &&
 			(state.game.status === GameStatus.PLAYING || state.game.status === GameStatus.CHECK) &&
 			!state.ui.botThinking
 		) {

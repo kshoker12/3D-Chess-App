@@ -2,7 +2,7 @@ import { Box, useTexture } from "@react-three/drei";
 import { FC } from "react";
 
 const Table: FC = () => {
-	const tableTexture = useTexture('/table.jpeg');
+	const tableTexture = useTexture('/table2.jpeg');
 	const floor = useTexture('/floor.jpeg');
 	const wall = useTexture('/wall.jpeg');
 

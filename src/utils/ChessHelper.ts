@@ -47,8 +47,8 @@ export const createBoard = (fen: string): { board: Board; pieces: Piece[] } => {
 				// Calculate 3D position from square coordinates
 				// FEN ranks: rank 0 in array = rank 8 in chess, rank 7 in array = rank 1 in chess
 				// So we need to invert the rank calculation
-				const position = {
-					x: file - 4,
+			const position = {
+					x: 3 - file,
 					y: -0.4,
 					z: (7 - rank) - 4  // Invert rank: rank 0 -> z = 3, rank 7 -> z = -4
 				};
@@ -93,7 +93,7 @@ export const applyMoveToBoard = (board: Board, pieces: Piece[], move: { from: Sq
 		const chessRank = parseInt(squareId.charAt(1)); // This is the FEN rank (1-8)
 		const arrayRank = 8 - chessRank; // Convert FEN rank to array rank
 		return {
-			x: file - 4,
+			x: 3 - file,
 			y: -0.4,
 			z: (7 - arrayRank) - 4
 		};
@@ -145,10 +145,13 @@ export const applyMoveToBoard = (board: Board, pieces: Piece[], move: { from: Sq
 	newBoard[move.from] = null;
 	
 	// Handle castling
-	const isCastling = movingPiece.pieceId === 'wk' || movingPiece.pieceId === 'bk';
+	// Use chess.js result flags if available to determine if it's a castle
+	// 'k' for kingside, 'q' for queenside
+	const isCastling = chessResult && (chessResult.flags.includes('k') || chessResult.flags.includes('q'));
+	
 	if (isCastling) {
-		const isKingSideCastling = move.to === 'g1' || move.to === 'g8';
-		const isQueenSideCastling = move.to === 'c1' || move.to === 'c8';
+		const isKingSideCastling = chessResult.flags.includes('k');
+		const isQueenSideCastling = chessResult.flags.includes('q');
 		
 		if (isKingSideCastling) {
 			// King-side castling: move rook from h1/h8 to f1/f8
@@ -195,7 +198,7 @@ export const applyMoveToBoard = (board: Board, pieces: Piece[], move: { from: Sq
 				newBoard[rookFrom as SquareId] = null;
 			}
 		}
-	}
+    }
 	
 	// Handle promotion if specified
 	if (move.promotion && updatedPiece) {

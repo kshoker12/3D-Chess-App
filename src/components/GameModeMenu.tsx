@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { useAppDispatch } from '../store/hooks';
-import { setGameMode, setPlayerColor, setBotDifficulty, setShowGameModeMenu } from '../store/slices/uiSlice';
+import { setGameMode, setPlayerColor, setBotDifficulty, setShowGameModeMenu, setIsAutomated } from '../store/slices/uiSlice';
 import { GameMode, BotDifficulty } from '../types/uiTypes';
 import { makeBotMove } from '../store/slices/gameSlice';
 
@@ -10,6 +10,7 @@ const GameModeMenu: React.FC = () => {
     const dispatch = useAppDispatch();
     const { showGameModeMenu } = useSelector((state: RootState) => state.ui);
     const [showColorSelection, setShowColorSelection] = useState(false);
+    const [isAutomatedSetup, setIsAutomatedSetup] = useState(false);
     const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>('medium');
 
     if (!showGameModeMenu) return null;
@@ -27,20 +28,39 @@ const GameModeMenu: React.FC = () => {
         // Set bot difficulty before starting the game
         dispatch(setBotDifficulty(selectedDifficulty));
         dispatch(setPlayerColor(color));
-        dispatch(setGameMode(GameMode.VS_BOT));
+        
+        if (isAutomatedSetup) {
+            // For automated play, we use PASS_AND_PLAY but with automation flag
+            dispatch(setIsAutomated(true));
+            dispatch(setGameMode(GameMode.PASS_AND_PLAY));
+            
+            // Trigger first move immediately for white (Automated Agent 0)
+            // Black move will be triggered by listener
+            if (color === 'w') {
+                 setTimeout(() => {
+                    dispatch(makeBotMove());
+                }, 500);
+            }
+        } else {
+            dispatch(setIsAutomated(false));
+            dispatch(setGameMode(GameMode.VS_BOT));
+            
+            // If user selects black, trigger bot's first move after a short delay
+            if (color === 'b') {
+                setTimeout(() => {
+                    dispatch(makeBotMove());
+                }, 1000);
+            }
+        }
+        
         dispatch(setShowGameModeMenu(false));
         setShowColorSelection(false);
-        
-        // If user selects black, trigger bot's first move after a short delay
-        if (color === 'b') {
-            setTimeout(() => {
-                dispatch(makeBotMove());
-            }, 1000);
-        }
+        setIsAutomatedSetup(false);
     };
 
     const handleBack = () => {
         setShowColorSelection(false);
+        setIsAutomatedSetup(false);
     };
 
     return (
@@ -72,6 +92,16 @@ const GameModeMenu: React.FC = () => {
                                 <i className="fas fa-robot text-xl lg:text-2xl"></i>
                                 <span>VS Bot</span>
                             </button>
+                            <button
+                                onClick={() => {
+                                    setIsAutomatedSetup(true);
+                                    setShowColorSelection(true);
+                                }}
+                                className="px-6 py-3 lg:px-8 lg:py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
+                            >
+                                <i className="fas fa-cogs text-xl lg:text-2xl"></i>
+                                <span>Automated Play</span>
+                            </button>
                         </div>
                         <div className="mt-4 lg:mt-6 text-gray-400 text-xs lg:text-sm">
                             <i className="fas fa-info-circle mr-1 lg:mr-2"></i>
@@ -81,10 +111,10 @@ const GameModeMenu: React.FC = () => {
                 ) : (
                     <>
                         <div className="text-4xl lg:text-6xl mb-3 lg:mb-4">
-                            <i className="fas fa-robot text-purple-400"></i>
+                            <i className={`fas ${isAutomatedSetup ? 'fa-cogs text-green-400' : 'fa-robot text-purple-400'}`}></i>
                         </div>
                         <h2 className="text-2xl lg:text-4xl font-bold text-white mb-3 lg:mb-4">
-                            Choose Bot Difficulty
+                            {isAutomatedSetup ? 'Automated Play Settings' : 'Choose Bot Difficulty'}
                         </h2>
                         <p className="text-gray-300 text-sm lg:text-base mb-4">
                             Select how challenging the bot should be
@@ -127,28 +157,46 @@ const GameModeMenu: React.FC = () => {
                         <div className="mb-3 lg:mb-4">
                             <div className="h-px bg-gray-600"></div>
                         </div>
-                        <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 lg:mb-4">
-                            Choose Your Color
-                        </h3>
-                        <p className="text-gray-300 text-sm lg:text-base mb-4 lg:mb-6">
-                            Select which color you want to play as
-                        </p>
-                        <div className="flex flex-col space-y-3 lg:space-y-4">
-                            <button
-                                onClick={() => handleColorSelection('w')}
-                                className="px-6 py-3 lg:px-8 lg:py-4 bg-white hover:bg-gray-100 text-black font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
-                            >
-                                <i className="fas fa-chess-king text-xl lg:text-2xl"></i>
-                                <span>Play as White</span>
-                            </button>
-                            <button
-                                onClick={() => handleColorSelection('b')}
-                                className="px-6 py-3 lg:px-8 lg:py-4 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
-                            >
-                                <i className="fas fa-chess-king text-xl lg:text-2xl"></i>
-                                <span>Play as Black</span>
-                            </button>
-                        </div>
+                        
+                        {!isAutomatedSetup && (
+                            <>
+                                <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 lg:mb-4">
+                                    Choose Your Color
+                                </h3>
+                                <p className="text-gray-300 text-sm lg:text-base mb-4 lg:mb-6">
+                                    Select which color you want to play as
+                                </p>
+                                <div className="flex flex-col space-y-3 lg:space-y-4">
+                                    <button
+                                        onClick={() => handleColorSelection('w')}
+                                        className="px-6 py-3 lg:px-8 lg:py-4 bg-white hover:bg-gray-100 text-black font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
+                                    >
+                                        <i className="fas fa-chess-king text-xl lg:text-2xl"></i>
+                                        <span>Play as White</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handleColorSelection('b')}
+                                        className="px-6 py-3 lg:px-8 lg:py-4 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
+                                    >
+                                        <i className="fas fa-chess-king text-xl lg:text-2xl"></i>
+                                        <span>Play as Black</span>
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {isAutomatedSetup && (
+                            <div className="flex flex-col space-y-3 lg:space-y-4">
+                                <button
+                                    onClick={() => handleColorSelection('w')} // Defaulting to white for start? Or just start.
+                                    className="px-6 py-3 lg:px-8 lg:py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
+                                >
+                                    <i className="fas fa-play text-xl lg:text-2xl"></i>
+                                    <span>Start Automated Play</span>
+                                </button>
+                            </div>
+                        )}
+
                         <button
                             onClick={handleBack}
                             className="mt-4 lg:mt-6 px-4 py-2 lg:px-6 lg:py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors text-sm lg:text-base"
@@ -158,7 +206,7 @@ const GameModeMenu: React.FC = () => {
                         </button>
                         <div className="mt-3 lg:mt-4 text-gray-400 text-xs lg:text-sm">
                             <i className="fas fa-info-circle mr-1 lg:mr-2"></i>
-                            White moves first
+                            {isAutomatedSetup ? 'Watch two bots play against each other' : 'White moves first'}
                         </div>
                     </>
                 )}
