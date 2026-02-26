@@ -9,207 +9,105 @@ import { makeBotMove } from '../store/slices/gameSlice';
 const GameModeMenu: React.FC = () => {
     const dispatch = useAppDispatch();
     const { showGameModeMenu } = useSelector((state: RootState) => state.ui);
-    const [showColorSelection, setShowColorSelection] = useState(false);
-    const [isAutomatedSetup, setIsAutomatedSetup] = useState(false);
     const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>('medium');
 
     if (!showGameModeMenu) return null;
 
-    const handlePassAndPlay = () => {
-        dispatch(setGameMode(GameMode.PASS_AND_PLAY));
-        dispatch(setShowGameModeMenu(false));
-    };
-
-    const handleVsBot = () => {
-        setShowColorSelection(true);
-    };
-
     const handleColorSelection = (color: 'w' | 'b') => {
-        // Set bot difficulty before starting the game
         dispatch(setBotDifficulty(selectedDifficulty));
         dispatch(setPlayerColor(color));
-        
-        if (isAutomatedSetup) {
-            // For automated play, we use PASS_AND_PLAY but with automation flag
-            dispatch(setIsAutomated(true));
-            dispatch(setGameMode(GameMode.PASS_AND_PLAY));
-            
-            // Trigger first move immediately for white (Automated Agent 0)
-            // Black move will be triggered by listener
-            if (color === 'w') {
-                 setTimeout(() => {
-                    dispatch(makeBotMove());
-                }, 500);
-            }
-        } else {
-            dispatch(setIsAutomated(false));
-            dispatch(setGameMode(GameMode.VS_BOT));
-            
-            // If user selects black, trigger bot's first move after a short delay
-            if (color === 'b') {
-                setTimeout(() => {
-                    dispatch(makeBotMove());
-                }, 1000);
-            }
+        dispatch(setIsAutomated(false));
+        dispatch(setGameMode(GameMode.VS_BOT));
+
+        // Automated play — commented out; menu is vs bot only with color + difficulty
+        // if (isAutomatedSetup) {
+        //     dispatch(setIsAutomated(true));
+        //     dispatch(setGameMode(GameMode.PASS_AND_PLAY));
+        //     if (color === 'w') setTimeout(() => dispatch(makeBotMove()), 500);
+        // } else { ... }
+
+        if (color === 'b') {
+            setTimeout(() => dispatch(makeBotMove()), 1000);
         }
-        
         dispatch(setShowGameModeMenu(false));
-        setShowColorSelection(false);
-        setIsAutomatedSetup(false);
     };
 
-    const handleBack = () => {
-        setShowColorSelection(false);
-        setIsAutomatedSetup(false);
-    };
+    const difficultyConfig: { key: BotDifficulty; label: string; icon: string; activeClass: string }[] = [
+        { key: 'easy', label: 'Easy', icon: 'fa-feather', activeClass: 'bg-emerald-500/90 text-white border-emerald-400/60 shadow-[0_0_20px_rgba(16,185,129,0.35)]' },
+        { key: 'medium', label: 'Medium', icon: 'fa-user', activeClass: 'bg-amber-500/90 text-white border-amber-400/60 shadow-[0_0_20px_rgba(245,158,11,0.35)]' },
+        { key: 'hard', label: 'Hard', icon: 'fa-brain', activeClass: 'bg-rose-500/90 text-white border-rose-400/60 shadow-[0_0_20px_rgba(244,63,94,0.35)]' },
+    ];
 
     return (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] pointer-events-auto">
-            <div className="bg-gradient-to-r from-gray-800/95 to-gray-900/95 backdrop-blur-md rounded-2xl p-4 lg:p-8 border-4 border-gray-600 shadow-2xl text-center max-w-sm lg:max-w-md mx-4">
-                {!showColorSelection ? (
-                    <>
-                        <div className="text-4xl lg:text-6xl mb-3 lg:mb-4">
-                            <i className="fas fa-chess text-white"></i>
-                        </div>
-                        <h2 className="text-2xl lg:text-4xl font-bold text-white mb-4 lg:mb-6">
-                            Choose Game Mode
-                        </h2>
-                        <p className="text-gray-300 text-base lg:text-lg mb-6 lg:mb-8">
-                            Select how you want to play chess
-                        </p>
-                        <div className="flex flex-col space-y-3 lg:space-y-4">
-                            <button
-                                onClick={handlePassAndPlay}
-                                className="px-6 py-3 lg:px-8 lg:py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
-                            >
-                                <i className="fas fa-users text-xl lg:text-2xl"></i>
-                                <span>Pass & Play</span>
-                            </button>
-                            <button
-                                onClick={handleVsBot}
-                                className="px-6 py-3 lg:px-8 lg:py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
-                            >
-                                <i className="fas fa-robot text-xl lg:text-2xl"></i>
-                                <span>VS Bot</span>
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setIsAutomatedSetup(true);
-                                    setShowColorSelection(true);
-                                }}
-                                className="px-6 py-3 lg:px-8 lg:py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
-                            >
-                                <i className="fas fa-cogs text-xl lg:text-2xl"></i>
-                                <span>Automated Play</span>
-                            </button>
-                        </div>
-                        <div className="mt-4 lg:mt-6 text-gray-400 text-xs lg:text-sm">
-                            <i className="fas fa-info-circle mr-1 lg:mr-2"></i>
-                            Pass & Play: Two players on the same device
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="text-4xl lg:text-6xl mb-3 lg:mb-4">
-                            <i className={`fas ${isAutomatedSetup ? 'fa-cogs text-green-400' : 'fa-robot text-purple-400'}`}></i>
-                        </div>
-                        <h2 className="text-2xl lg:text-4xl font-bold text-white mb-3 lg:mb-4">
-                            {isAutomatedSetup ? 'Automated Play Settings' : 'Choose Bot Difficulty'}
-                        </h2>
-                        <p className="text-gray-300 text-sm lg:text-base mb-4">
-                            Select how challenging the bot should be
-                        </p>
-                        <div className="flex flex-col space-y-2 mb-4 lg:mb-6">
-                            <button
-                                onClick={() => setSelectedDifficulty('easy')}
-                                className={`px-6 py-2 lg:py-3 rounded-lg font-bold text-base lg:text-lg transition-colors flex items-center justify-center space-x-2 ${
-                                    selectedDifficulty === 'easy'
-                                        ? 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-400'
-                                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-2 border-gray-600'
-                                }`}
-                            >
-                                <i className="fas fa-baby"></i>
-                                <span>Easy</span>
-                            </button>
-                            <button
-                                onClick={() => setSelectedDifficulty('medium')}
-                                className={`px-6 py-2 lg:py-3 rounded-lg font-bold text-base lg:text-lg transition-colors flex items-center justify-center space-x-2 ${
-                                    selectedDifficulty === 'medium'
-                                        ? 'bg-yellow-600 hover:bg-yellow-700 text-white border-2 border-yellow-400'
-                                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-2 border-gray-600'
-                                }`}
-                            >
-                                <i className="fas fa-user"></i>
-                                <span>Medium</span>
-                            </button>
-                            <button
-                                onClick={() => setSelectedDifficulty('hard')}
-                                className={`px-6 py-2 lg:py-3 rounded-lg font-bold text-base lg:text-lg transition-colors flex items-center justify-center space-x-2 ${
-                                    selectedDifficulty === 'hard'
-                                        ? 'bg-red-600 hover:bg-red-700 text-white border-2 border-red-400'
-                                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-2 border-gray-600'
-                                }`}
-                            >
-                                <i className="fas fa-brain"></i>
-                                <span>Hard</span>
-                            </button>
-                        </div>
-                        <div className="mb-3 lg:mb-4">
-                            <div className="h-px bg-gray-600"></div>
-                        </div>
-                        
-                        {!isAutomatedSetup && (
-                            <>
-                                <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 lg:mb-4">
-                                    Choose Your Color
-                                </h3>
-                                <p className="text-gray-300 text-sm lg:text-base mb-4 lg:mb-6">
-                                    Select which color you want to play as
-                                </p>
-                                <div className="flex flex-col space-y-3 lg:space-y-4">
-                                    <button
-                                        onClick={() => handleColorSelection('w')}
-                                        className="px-6 py-3 lg:px-8 lg:py-4 bg-white hover:bg-gray-100 text-black font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
-                                    >
-                                        <i className="fas fa-chess-king text-xl lg:text-2xl"></i>
-                                        <span>Play as White</span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleColorSelection('b')}
-                                        className="px-6 py-3 lg:px-8 lg:py-4 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
-                                    >
-                                        <i className="fas fa-chess-king text-xl lg:text-2xl"></i>
-                                        <span>Play as Black</span>
-                                    </button>
-                                </div>
-                            </>
-                        )}
+        <div className="absolute inset-0 flex items-center justify-center z-[10000] pointer-events-auto p-4 sm:p-6 bg-black/60 backdrop-blur-md">
+            <div className="w-full max-w-md rounded-2xl overflow-hidden bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-xl border border-white/[0.12] shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_24px_48px_-12px_rgba(0,0,0,0.6),0_0_80px_-24px_rgba(59,130,246,0.15)]">
+                {/* Header */}
+                <div className="relative px-6 pt-6 pb-4 sm:pt-7 sm:pb-5 text-center border-b border-white/[0.08]">
+                    <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/30 mb-3 sm:mb-4 shadow-inner">
+                        <i className="fas fa-chess-knight text-amber-400/90 text-xl sm:text-2xl" aria-hidden />
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300">
+                        New game
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-1">
+                        Choose your side and opponent strength
+                    </p>
+                </div>
 
-                        {isAutomatedSetup && (
-                            <div className="flex flex-col space-y-3 lg:space-y-4">
+                <div className="px-5 sm:px-6 py-5 sm:py-6 space-y-6">
+                    {/* Difficulty */}
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-3">
+                            Difficulty
+                        </p>
+                        <div className="grid grid-cols-3 gap-2">
+                            {difficultyConfig.map(({ key, label, icon, activeClass }) => (
                                 <button
-                                    onClick={() => handleColorSelection('w')} // Defaulting to white for start? Or just start.
-                                    className="px-6 py-3 lg:px-8 lg:py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-lg lg:text-xl flex items-center justify-center space-x-2 lg:space-x-3"
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setSelectedDifficulty(key)}
+                                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium transition-all duration-200 border ${
+                                        selectedDifficulty === key
+                                            ? `${activeClass} ring-2 ring-white/20 scale-[1.02]`
+                                            : 'bg-slate-800/80 text-slate-400 border-slate-600/60 hover:bg-slate-700/80 hover:text-slate-300 hover:border-slate-500/60'
+                                    }`}
                                 >
-                                    <i className="fas fa-play text-xl lg:text-2xl"></i>
-                                    <span>Start Automated Play</span>
+                                    <i className={`fas ${icon} text-base sm:text-lg opacity-90`} aria-hidden />
+                                    <span className="capitalize">{label}</span>
                                 </button>
-                            </div>
-                        )}
-
-                        <button
-                            onClick={handleBack}
-                            className="mt-4 lg:mt-6 px-4 py-2 lg:px-6 lg:py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors text-sm lg:text-base"
-                        >
-                            <i className="fas fa-arrow-left mr-1 lg:mr-2"></i>
-                            Back
-                        </button>
-                        <div className="mt-3 lg:mt-4 text-gray-400 text-xs lg:text-sm">
-                            <i className="fas fa-info-circle mr-1 lg:mr-2"></i>
-                            {isAutomatedSetup ? 'Watch two bots play against each other' : 'White moves first'}
+                            ))}
                         </div>
-                    </>
-                )}
+                    </div>
+
+                    {/* Play as */}
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-3">
+                            Play as
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => handleColorSelection('w')}
+                                className="group flex flex-col items-center gap-2 py-4 sm:py-5 rounded-xl font-semibold text-sm sm:text-base bg-gradient-to-b from-slate-100 to-slate-200 text-slate-900 border border-slate-300/80 shadow-lg hover:shadow-xl hover:scale-[1.02] hover:border-slate-200 transition-all duration-200"
+                            >
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/90 flex items-center justify-center border border-slate-200 shadow-inner group-hover:bg-white transition-colors">
+                                    <i className="fas fa-chess-king text-slate-700 text-lg sm:text-xl" aria-hidden />
+                                </div>
+                                <span>White</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleColorSelection('b')}
+                                className="group flex flex-col items-center gap-2 py-4 sm:py-5 rounded-xl font-semibold text-sm sm:text-base bg-gradient-to-b from-slate-700 to-slate-900 text-slate-100 border border-slate-600/80 shadow-lg hover:shadow-xl hover:scale-[1.02] hover:border-slate-500 transition-all duration-200"
+                            >
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-800/90 flex items-center justify-center border border-slate-600 shadow-inner group-hover:bg-slate-700/90 transition-colors">
+                                    <i className="fas fa-chess-king text-slate-200 text-lg sm:text-xl" aria-hidden />
+                                </div>
+                                <span>Black</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

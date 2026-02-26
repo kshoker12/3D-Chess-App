@@ -1,16 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
-import { decrementTimer, pauseGame, startGame, resetUI, setShowGameModeMenu } from '../store/slices/uiSlice';
+import { decrementTimer, resetUI, setShowGameModeMenu, setViewMode } from '../store/slices/uiSlice';
 import { PieceType } from '../types/boardTypes';
-import { PIECE_VALUE } from '../types/uiTypes';
+import { getPieceImageWhite, getPieceImageBlack } from '../utils/pieceImages';
 import { GameStatus } from '../types/gameTypes';
 import { resetGame } from '../store/slices/gameSlice';
 import { setBoardFromFen, setLastMove, setMovingPiece } from '../store/slices/boardSlice';
 
 const GameUI: React.FC = () => {
     const dispatch = useDispatch();
-    const { teams, fenParts, gameStarted, gameMode, playerColor } = useSelector((state: RootState) => state.ui);
+    const { teams, fenParts, gameStarted, botThinking, playerColor, viewMode } = useSelector((state: RootState) => state.ui);
+    const botColor = playerColor === 'w' ? 'b' : 'w';
     const { status } = useSelector((state: RootState) => state.game);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -74,10 +75,10 @@ const GameUI: React.FC = () => {
                 };
             default:
                 return {
-                    text: gameStarted ? 'Game Active' : 'Game Paused',
-                    icon: gameStarted ? 'fa-play-circle' : 'fa-pause-circle',
-                    color: gameStarted ? 'text-green-400 bg-green-900/30 border-green-500' : 'text-yellow-400 bg-yellow-900/30 border-yellow-500',
-                    bgColor: gameStarted ? 'bg-gradient-to-r from-green-600/90 to-green-800/90' : 'bg-gradient-to-r from-yellow-600/90 to-yellow-800/90'
+                    text: gameStarted ? 'In progress' : 'Ready',
+                    icon: 'fa-chess-board',
+                    color: gameStarted ? 'text-emerald-400 bg-emerald-900/30 border-emerald-500' : 'text-slate-400 bg-slate-800/50 border-slate-500',
+                    bgColor: gameStarted ? 'bg-gradient-to-r from-emerald-600/90 to-emerald-800/90' : 'bg-gradient-to-r from-slate-600/90 to-slate-800/90'
                 };
         }
     };
@@ -93,508 +94,247 @@ const GameUI: React.FC = () => {
         dispatch(setShowGameModeMenu(true));
     };
 
-    const getPieceImage = (pieceType: PieceType): string => {
-        const pieceMap: Record<PieceType, string> = {
-            'p': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wp.png',
-            'r': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wr.png',
-            'b': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wb.png',
-            'n': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wn.png',
-            'q': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png',
-            'k': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png',
-        };
-        return pieceMap[pieceType] || '';
-    };
+    const materialAdvantage = teams.w.points - teams.b.points;
 
-    const getPieceImageBlack = (pieceType: PieceType): string => {
-        const pieceMap: Record<PieceType, string> = {
-            'p': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bp.png',
-            'r': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/br.png',
-            'b': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bb.png',
-            'n': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bn.png',
-            'q': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png',
-            'k': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png',
-        };
-        return pieceMap[pieceType] || '';
-    };
+    const bannerCardClass = 'overflow-visible bg-gradient-to-b from-slate-800/95 to-slate-900/95 backdrop-blur-xl border-b border-x border-white/[0.12] shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_24px_48px_-12px_rgba(0,0,0,0.6),0_0_80px_-24px_rgba(59,130,246,0.15)]';
+    const bannerSectionClass = 'rounded-xl bg-white/[0.06] border border-white/[0.08]';
+    const capturesTrayClass = `rounded-lg py-1 px-2 ${bannerSectionClass}`;
+    /* Light tray only for black piece icons (White's captures) so they're visible on dark banner */
+    const capturesTrayWhiteSide = 'rounded-lg py-1 px-2 bg-slate-100/90 border border-slate-300/60';
+
+    const botThinkingIndicator = (
+        <div className="absolute top-full left-0 mt-1.5 z-50 inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-violet-400/40 bg-violet-500/20 text-violet-200 text-xs font-medium shadow-lg whitespace-nowrap">
+            <i className="fas fa-robot text-violet-400 animate-pulse" aria-hidden />
+            Bot is thinking
+            <span className="flex gap-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '120ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '240ms' }} />
+            </span>
+        </div>
+    );
 
     return (
         <div className="absolute inset-0 pointer-events-none z-10">
-            <div className="hidden lg:block absolute top-0 left-0 right-0 bg-gradient-to-r from-black/90 via-gray-900/90 to-black/90 backdrop-blur-md border-b border-gray-600 shadow-2xl">
-                <div className="flex justify-between items-center p-4">
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-gray-300">
-                                <i className="fas fa-chess-king text-black text-xl"></i>
-                            </div>
-                            <span className="text-white font-bold text-xl">White</span>
-                            {gameMode === 'vs_bot' && playerColor === 'w' && (
-                                <span className="text-green-400 text-sm font-semibold bg-green-900/30 px-2 py-1 rounded">
-                                    <i className="fas fa-user mr-1"></i>You
-                                </span>
-                            )}
-                            {gameMode === 'vs_bot' && playerColor === 'b' && (
-                                <span className="text-purple-400 text-sm font-semibold bg-purple-900/30 px-2 py-1 rounded">
-                                    <i className="fas fa-robot mr-1"></i>Bot
-                                </span>
-                            )}
-                        </div>
-                        <div className={`text-3xl font-mono px-6 py-3 rounded-xl shadow-lg transition-colors flex items-center space-x-2 ${
-                            teams.w.timeRemaining < 60 
-                                ? 'text-red-400 bg-red-900/50 border-2 border-red-500' 
-                                : 'text-white bg-gray-800 border-2 border-gray-600'
-                        }`}>
-                            <i className={`fas fa-clock ${teams.w.timeRemaining < 60 ? 'text-red-400' : 'text-gray-400'}`}></i>
-                            <span>{formatTime(teams.w.timeRemaining)}</span>
-                        </div>
-                        <div className="text-white font-semibold text-lg bg-gray-700/50 px-4 py-2 rounded-lg flex items-center space-x-2">
-                            <i className="fas fa-trophy text-yellow-400"></i>
-                            <span>Points: {teams.w.points}</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        {(() => {
-                            const statusDisplay = getGameStatusDisplay();
-                            return (
-                                <div className={`font-bold text-2xl mb-2 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${statusDisplay.color}`}>
-                                    <i className={`fas ${statusDisplay.icon}`}></i>
-                                    <span>{statusDisplay.text}</span>
+            {/* Desktop: banner card (menu-style) */}
+            <header className="hidden sm:block absolute top-0 left-0 right-0">
+                <div className={`${bannerCardClass} px-3 sm:px-4 py-2 sm:py-3`}>
+                    {/* Row 1: side + timer | center (status + New game) | timer + side */}
+                    <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
+                        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
+                            <div className="relative">
+                                <div className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg ${bannerSectionClass}`}>
+                                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-white to-slate-200 flex-shrink-0 flex items-center justify-center border border-white/40 shadow-inner">
+                                        <i className="fas fa-chess-king text-slate-800 text-[10px]" aria-hidden />
+                                    </div>
+                                    <span className="text-white font-semibold text-xs sm:text-sm">White</span>
                                 </div>
-                            );
-                        })()}
-                        <div className="flex flex-row items-center space-x-2">
-                            <div className="text-gray-300 text-lg font-semibold flex items-center space-x-2">
-                                <i className={`fas fa-chess-${fenParts.active === 'w' ? 'pawn' : 'pawn'} ${fenParts.active === 'w' ? 'text-white' : 'text-gray-700'}`}></i>
-                                <span>{fenParts.active === 'w' ? 'White to move' : 'Black to move'}</span>
+                                {botThinking && botColor === 'w' && botThinkingIndicator}
                             </div>
-                            <div className="font-bold text-lg flex items-center justify-center space-x-2">
-                                <i className="fas fa-chess-board text-blue-400"></i>
-                                <span>Move {Math.ceil(fenParts.fullmove)}</span>
+                            <div className={`flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1.5 rounded-lg font-mono text-xs sm:text-sm tabular-nums min-w-[3.75rem] sm:min-w-[4.5rem] justify-center shrink-0 ${teams.w.timeRemaining < 60 ? 'text-red-300 bg-red-500/20 border border-red-400/30' : bannerSectionClass}`}>
+                                <i className={`fas fa-clock text-[10px] sm:text-xs flex-shrink-0 ${teams.w.timeRemaining < 60 ? 'text-red-400' : 'text-slate-400'}`} aria-hidden />
+                                <span className="text-slate-200 whitespace-nowrap">{formatTime(teams.w.timeRemaining)}</span>
                             </div>
                         </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                        <div className="text-white font-semibold text-lg bg-gray-700/50 px-4 py-2 rounded-lg flex items-center space-x-2">
-                            <i className="fas fa-trophy text-yellow-400"></i>
-                            <span>Points: {teams.b.points}</span>
+                        <div className="flex items-center justify-center gap-2 sm:gap-3 flex-shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => dispatch(setViewMode(viewMode === '3d' ? '2d' : '3d'))}
+                                className="pointer-events-auto flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 min-h-[2.5rem] sm:min-h-0 rounded-lg sm:rounded-xl bg-white/10 hover:bg-white/15 border border-white/[0.12] text-slate-200 hover:text-white text-xs sm:text-sm font-medium transition-all shadow-sm active:scale-[0.98]"
+                            >
+                                {viewMode === '3d' ? 'Play 2D' : 'Play 3D'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleNewGame}
+                                className="pointer-events-auto flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 min-h-[2.5rem] sm:min-h-0 rounded-lg sm:rounded-xl bg-white/10 hover:bg-white/15 border border-white/[0.12] text-slate-200 hover:text-white text-xs sm:text-sm font-medium transition-all shadow-sm active:scale-[0.98]"
+                            >
+                                <i className="fas fa-plus text-[10px] sm:text-xs" aria-hidden />
+                                New game
+                            </button>
                         </div>
-                        <div className={`text-3xl font-mono px-6 py-3 rounded-xl shadow-lg transition-colors flex items-center space-x-2 ${
-                            teams.b.timeRemaining < 60 
-                                ? 'text-red-400 bg-red-900/50 border-2 border-red-500' 
-                                : 'text-white bg-gray-800 border-2 border-gray-600'
-                        }`}>
-                            <i className={`fas fa-clock ${teams.b.timeRemaining < 60 ? 'text-red-400' : 'text-gray-400'}`}></i>
-                            <span>{formatTime(teams.b.timeRemaining)}</span>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            {gameMode === 'vs_bot' && playerColor === 'b' && (
-                                <span className="text-green-400 text-sm font-semibold bg-green-900/30 px-2 py-1 rounded">
-                                    <i className="fas fa-user mr-1"></i>You
-                                </span>
-                            )}
-                            {gameMode === 'vs_bot' && playerColor === 'w' && (
-                                <span className="text-purple-400 text-sm font-semibold bg-purple-900/30 px-2 py-1 rounded">
-                                    <i className="fas fa-robot mr-1"></i>Bot
-                                </span>
-                            )}
-                            <span className="text-white font-bold text-xl">Black</span>
-                            <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-600">
-                                <i className="fas fa-chess-king text-white text-xl"></i>
+                        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1 justify-end">
+                            <div className={`flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1.5 rounded-lg font-mono text-xs sm:text-sm tabular-nums min-w-[3.75rem] sm:min-w-[4.5rem] justify-center shrink-0 ${teams.b.timeRemaining < 60 ? 'text-red-300 bg-red-500/20 border border-red-400/30' : bannerSectionClass}`}>
+                                <span className="text-slate-200 whitespace-nowrap">{formatTime(teams.b.timeRemaining)}</span>
+                                <i className={`fas fa-clock text-[10px] sm:text-xs flex-shrink-0 ${teams.b.timeRemaining < 60 ? 'text-red-400' : 'text-slate-400'}`} aria-hidden />
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="lg:hidden absolute top-0 left-0 right-0 bg-gradient-to-r from-black/90 via-gray-900/90 to-black/90 backdrop-blur-md border-b border-gray-600 shadow-2xl">
-                <div className="px-3 py-2">
-                    {(() => {
-                        const statusDisplay = getGameStatusDisplay();
-                        return (
-                            <div className={`font-bold text-lg mb-2 px-3 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${statusDisplay.color}`}>
-                                <i className={`fas ${statusDisplay.icon}`}></i>
-                                <span>{statusDisplay.text}</span>
-                            </div>
-                        );
-                    })()}
-                </div>
-
-                {/* Mobile Teams Row */}
-                <div className="flex justify-between items-center px-3 pb-2">
-                    {/* White Team */}
-                    <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-gray-300">
-                            <i className="fas fa-chess-king text-black text-sm"></i>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-white font-bold text-sm">White</span>
-                            {gameMode === 'vs_bot' && playerColor === 'w' && (
-                                <span className="text-green-400 text-xs font-semibold bg-green-900/30 px-1 py-0.5 rounded">
-                                    <i className="fas fa-user mr-1"></i>You
-                                </span>
-                            )}
-                            {gameMode === 'vs_bot' && playerColor === 'b' && (
-                                <span className="text-purple-400 text-xs font-semibold bg-purple-900/30 px-1 py-0.5 rounded">
-                                    <i className="fas fa-robot mr-1"></i>Bot
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Center Info */}
-                    <div className="flex flex-col items-center space-y-1">
-                        <div className="text-gray-300 text-sm font-semibold flex items-center space-x-1">
-                            <i className={`fas fa-chess-${fenParts.active === 'w' ? 'pawn' : 'pawn'} ${fenParts.active === 'w' ? 'text-white' : 'text-gray-700'}`}></i>
-                            <span>{fenParts.active === 'w' ? 'White' : 'Black'} to move</span>
-                        </div>
-                        <div className="font-bold text-sm flex items-center justify-center space-x-1">
-                            <i className="fas fa-chess-board text-blue-400"></i>
-                            <span>Move {Math.ceil(fenParts.fullmove)}</span>
-                        </div>
-                    </div>
-
-                    {/* Black Team */}
-                    <div className="flex items-center space-x-2">
-                        <div className="flex flex-col items-end">
-                            <span className="text-white font-bold text-sm">Black</span>
-                            {gameMode === 'vs_bot' && playerColor === 'b' && (
-                                <span className="text-green-400 text-xs font-semibold bg-green-900/30 px-1 py-0.5 rounded">
-                                    <i className="fas fa-user mr-1"></i>You
-                                </span>
-                            )}
-                            {gameMode === 'vs_bot' && playerColor === 'w' && (
-                                <span className="text-purple-400 text-xs font-semibold bg-purple-900/30 px-1 py-0.5 rounded">
-                                    <i className="fas fa-robot mr-1"></i>Bot
-                                </span>
-                            )}
-                        </div>
-                        <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-600">
-                            <i className="fas fa-chess-king text-white text-sm"></i>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Mobile Timers Row */}
-                <div className="flex justify-between items-center px-3 pb-3">
-                    {/* White Timer */}
-                    <div className={`text-xl font-mono px-3 py-2 rounded-lg shadow-lg transition-colors flex items-center space-x-1 ${
-                        teams.w.timeRemaining < 60 
-                            ? 'text-red-400 bg-red-900/50 border-2 border-red-500' 
-                            : 'text-white bg-gray-800 border-2 border-gray-600'
-                    }`}>
-                        <i className={`fas fa-clock text-sm ${teams.w.timeRemaining < 60 ? 'text-red-400' : 'text-gray-400'}`}></i>
-                        <span>{formatTime(teams.w.timeRemaining)}</span>
-                    </div>
-
-                    {/* Points Display */}
-                    <div className="flex space-x-2">
-                        <div className="text-white font-semibold text-sm bg-gray-700/50 px-2 py-1 rounded flex items-center space-x-1">
-                            <i className="fas fa-trophy text-yellow-400 text-xs"></i>
-                            <span>W: {teams.w.points}</span>
-                        </div>
-                        <div className="text-white font-semibold text-sm bg-gray-700/50 px-2 py-1 rounded flex items-center space-x-1">
-                            <i className="fas fa-trophy text-yellow-400 text-xs"></i>
-                            <span>B: {teams.b.points}</span>
-                        </div>
-                    </div>
-
-                    {/* Black Timer */}
-                    <div className={`text-xl font-mono px-3 py-2 rounded-lg shadow-lg transition-colors flex items-center space-x-1 ${
-                        teams.b.timeRemaining < 60 
-                            ? 'text-red-400 bg-red-900/50 border-2 border-red-500' 
-                            : 'text-white bg-gray-800 border-2 border-gray-600'
-                    }`}>
-                        <i className={`fas fa-clock text-sm ${teams.b.timeRemaining < 60 ? 'text-red-400' : 'text-gray-400'}`}></i>
-                        <span>{formatTime(teams.b.timeRemaining)}</span>
-                    </div>
-                </div>
-            </div>
-            {/* Desktop Captured Pieces */}
-            <div className="hidden lg:block absolute left-4 top-28 bg-white/95 backdrop-blur-md rounded-xl p-5 border-2 border-gray-400 shadow-xl">
-                <div className="flex items-center space-x-2 mb-3">
-                    <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center border border-gray-300">
-                        <i className="fas fa-chess-king text-black text-sm"></i>
-                    </div>
-                    <div className="text-black font-bold text-lg flex items-center space-x-2">
-                        <i className="fas fa-capture text-red-500"></i>
-                        <span>White Captured</span>
-                    </div>
-                </div>
-                <div className="flex flex-wrap gap-2 max-w-40">
-                    {teams.b.capturedPieces.map((piece, index) => (
-                        <div key={index} className="relative group">
-                            <img
-                                src={getPieceImageBlack(piece)}
-                                alt={`Captured ${piece}`}
-                                className="w-8 h-8 object-contain hover:scale-110 transition-transform"
-                            />
-                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                {PIECE_VALUE[piece]} pts
-                            </div>
-                        </div>
-                    ))}
-                    {teams.b.capturedPieces.length === 0 && (
-                        <div className="text-gray-500 text-sm italic flex items-center space-x-1">
-                            <i className="fas fa-minus-circle"></i>
-                            <span>No pieces captured</span>
-                        </div>
-                    )}
-                </div>
-                <div className="mt-2 text-sm text-gray-600 font-semibold flex items-center space-x-1">
-                    <i className="fas fa-calculator text-gray-500"></i>
-                    <span>Total Value: {teams.b.capturedPieces.reduce((sum, piece) => sum + PIECE_VALUE[piece], 0)} pts</span>
-                </div>
-            </div>
-            <div className="hidden lg:block absolute right-4 top-28 bg-gray-800/95 backdrop-blur-md rounded-xl p-5 border-2 border-gray-600 shadow-xl">
-                <div className="flex items-center space-x-2 mb-3">
-                    <div className="text-white font-bold text-lg flex items-center space-x-2">
-                        <i className="fas fa-capture text-red-500"></i>
-                        <span>Black Captured</span>
-                    </div>
-                    <div className="w-6 h-6 bg-gray-800 rounded-full flex items-center justify-center border border-gray-600">
-                        <i className="fas fa-chess-king text-white text-sm"></i>
-                    </div>
-                </div>
-                <div className="flex flex-wrap gap-2 max-w-40">
-                    {teams.w.capturedPieces.map((piece, index) => (
-                        <div key={index} className="relative group">
-                            <img
-                                src={getPieceImage(piece)}
-                                alt={`Captured ${piece}`}
-                                className="w-8 h-8 object-contain hover:scale-110 transition-transform"
-                            />
-                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                {PIECE_VALUE[piece]} pts
-                            </div>
-                        </div>
-                    ))}
-                    {teams.w.capturedPieces.length === 0 && (
-                        <div className="text-gray-400 text-sm italic flex items-center space-x-1">
-                            <i className="fas fa-minus-circle"></i>
-                            <span>No pieces captured</span>
-                        </div>
-                    )}
-                </div>
-                <div className="mt-2 text-sm text-gray-300 font-semibold flex items-center space-x-1">
-                    <i className="fas fa-calculator text-gray-400"></i>
-                    <span>Total Value: {teams.w.capturedPieces.reduce((sum, piece) => sum + PIECE_VALUE[piece], 0)} pts</span>
-                </div>
-            </div>
-
-            {/* Mobile Captured Pieces - Bottom Panel */}
-            <div className="lg:hidden absolute bottom-20 left-2 right-2 bg-black/90 backdrop-blur-md rounded-xl p-3 border-2 border-gray-600 shadow-xl">
-                <div className="flex justify-between items-start">
-                    {/* White Captured */}
-                    <div className="flex-1 mr-2">
-                        <div className="flex items-center space-x-2 mb-2">
-                            <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center border border-gray-300">
-                                <i className="fas fa-chess-king text-black text-xs"></i>
-                            </div>
-                            <div className="text-white font-bold text-sm flex items-center space-x-1">
-                                <i className="fas fa-capture text-red-500 text-xs"></i>
-                                <span>White</span>
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                            {teams.b.capturedPieces.map((piece, index) => (
-                                <div key={index} className="relative group">
-                                    <img
-                                        src={getPieceImageBlack(piece)}
-                                        alt={`Captured ${piece}`}
-                                        className="w-6 h-6 object-contain"
-                                    />
+                            <div className="relative">
+                                <div className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg ${bannerSectionClass}`}>
+                                    <span className="text-white font-semibold text-xs sm:text-sm">Black</span>
+                                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex-shrink-0 flex items-center justify-center border border-slate-500/50 shadow-inner">
+                                        <i className="fas fa-chess-king text-slate-200 text-[10px]" aria-hidden />
+                                    </div>
                                 </div>
-                            ))}
-                            {teams.b.capturedPieces.length === 0 && (
-                                <div className="text-gray-400 text-xs italic">
-                                    None
-                                </div>
-                            )}
-                        </div>
-                        <div className="text-xs text-gray-300 font-semibold mt-1">
-                            {teams.b.capturedPieces.reduce((sum, piece) => sum + PIECE_VALUE[piece], 0)} pts
-                        </div>
-                    </div>
-
-                    {/* Black Captured */}
-                    <div className="flex-1 ml-2">
-                        <div className="flex items-center space-x-2 mb-2">
-                            <div className="text-white font-bold text-sm flex items-center space-x-1">
-                                <i className="fas fa-capture text-red-500 text-xs"></i>
-                                <span>Black</span>
-                            </div>
-                            <div className="w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center border border-gray-600">
-                                <i className="fas fa-chess-king text-white text-xs"></i>
+                                {botThinking && botColor === 'b' && (
+                                    <div className="absolute top-full right-0 mt-1.5 z-50 inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-violet-400/40 bg-violet-500/20 text-violet-200 text-xs font-medium shadow-lg whitespace-nowrap">
+                                        <i className="fas fa-robot text-violet-400 animate-pulse" aria-hidden />
+                                        Bot is thinking
+                                        <span className="flex gap-0.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                            <span className="w-1.5 h-1.5 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '120ms' }} />
+                                            <span className="w-1.5 h-1.5 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '240ms' }} />
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="flex flex-wrap gap-1">
-                            {teams.w.capturedPieces.map((piece, index) => (
-                                <div key={index} className="relative group">
-                                    <img
-                                        src={getPieceImage(piece)}
-                                        alt={`Captured ${piece}`}
-                                        className="w-6 h-6 object-contain"
-                                    />
-                                </div>
-                            ))}
-                            {teams.w.capturedPieces.length === 0 && (
-                                <div className="text-gray-400 text-xs italic">
-                                    None
-                                </div>
+                    </div>
+                    {/* Row 2: captured pieces underneath each side */}
+                    <div className="flex items-center justify-between gap-2 sm:gap-4 mt-2 pt-2 border-t border-white/[0.08]">
+                        <div className={`flex items-center gap-1 sm:gap-1.5 flex-wrap min-h-[26px] sm:min-h-[28px] flex-1 min-w-0 ${capturesTrayWhiteSide}`}>
+                            {teams.b.capturedPieces.length > 0 ? teams.b.capturedPieces.map((p, i) => (
+                                <img key={i} src={getPieceImageBlack(p as PieceType)} alt="" className="w-5 h-5 object-contain" />
+                            )) : <span className="text-slate-500 text-xs">—</span>}
+                            {materialAdvantage < 0 && (
+                                <span className="font-mono text-sm font-semibold tabular-nums text-emerald-600">
+                                    +{Math.abs(materialAdvantage)}
+                                </span>
                             )}
                         </div>
-                        <div className="text-xs text-gray-300 font-semibold mt-1">
-                            {teams.w.capturedPieces.reduce((sum, piece) => sum + PIECE_VALUE[piece], 0)} pts
+                        <div className="flex-1 min-w-[60px] sm:min-w-[120px] flex-shrink-0" />
+                        <div className={`flex items-center gap-1 sm:gap-1.5 flex-wrap min-h-[26px] sm:min-h-[28px] flex-1 min-w-0 justify-end ${capturesTrayClass}`}>
+                            {teams.w.capturedPieces.length > 0 ? teams.w.capturedPieces.map((p, i) => (
+                                <img key={i} src={getPieceImageWhite(p as PieceType)} alt="" className="w-5 h-5 object-contain" />
+                            )) : <span className="text-slate-500 text-xs">—</span>}
+                            {materialAdvantage > 0 && (
+                                <span className="font-mono text-sm font-semibold tabular-nums text-emerald-600">
+                                    +{materialAdvantage}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
-            </div>
-            {/* Desktop Game Controls */}
-            <div className="hidden lg:block absolute bottom-4 right-4 bg-black/90 backdrop-blur-md rounded-xl p-5 border-2 border-gray-600 shadow-xl">
-                <div className="flex flex-col space-y-3">
-                    <div className="text-white font-bold text-lg mb-2 flex items-center space-x-2">
-                        <i className="fas fa-gamepad"></i>
-                        <span>Game Controls</span>
-                    </div>
-                    <button
-                        onClick={() => {
-                            if (gameStarted) {
-                                dispatch(pauseGame());
-                            } else {
-                                dispatch(startGame());
-                            }
-                        }}
-                        className={`px-6 py-3 rounded-xl font-bold text-lg transition-all duration-200 pointer-events-auto shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center space-x-2 ${
-                            gameStarted 
-                                ? 'bg-red-600 hover:bg-red-700 text-white border-2 border-red-500' 
-                                : 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-500'
-                        }`}
-                    >
-                        <i className={`fas ${gameStarted ? 'fa-pause' : 'fa-play'}`}></i>
-                        <span>{gameStarted ? 'Pause Game' : 'Resume Game'}</span>
-                    </button>
-                    <div className="text-gray-400 text-sm text-center flex items-center justify-center space-x-1">
-                        <i className="fas fa-info-circle"></i>
-                        <span>Press to {gameStarted ? 'pause' : 'resume'} the timer</span>
-                    </div>
-                </div>
-            </div>
+            </header>
 
-            {/* Mobile Game Controls */}
-            <div className="lg:hidden absolute bottom-2 right-2 bg-black/90 backdrop-blur-md rounded-xl p-3 border-2 border-gray-600 shadow-xl">
-                <button
-                    onClick={() => {
-                        if (gameStarted) {
-                            dispatch(pauseGame());
-                        } else {
-                            dispatch(startGame());
-                        }
-                    }}
-                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-all duration-200 pointer-events-auto shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center space-x-2 ${
-                        gameStarted 
-                            ? 'bg-red-600 hover:bg-red-700 text-white border-2 border-red-500' 
-                            : 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-500'
-                    }`}
-                >
-                    <i className={`fas ${gameStarted ? 'fa-pause' : 'fa-play'} text-sm`}></i>
-                    <span>{gameStarted ? 'Pause' : 'Resume'}</span>
-                </button>
-            </div>
-            {/* Desktop Active Player Indicator */}
-            {gameStarted && (
-                <div className={`hidden lg:block absolute bottom-4 left-4 backdrop-blur-md rounded-xl p-5 border-2 shadow-xl transition-all duration-300 ${
-                    fenParts.active === 'w' 
-                        ? 'bg-gradient-to-r from-blue-600/90 to-blue-800/90 border-blue-400' 
-                        : 'bg-gradient-to-r from-purple-600/90 to-purple-800/90 border-purple-400'
-                }`}>
-                    <div className="flex items-center space-x-3">
-                        <div className={`w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center ${
-                            fenParts.active === 'w' ? 'bg-white' : 'bg-gray-800'
-                        }`}>
-                            <i className={`fas fa-chess-${fenParts.active === 'w' ? 'pawn' : 'pawn'} ${fenParts.active === 'w' ? 'text-gray-800' : 'text-white'} text-xs`}></i>
+            {/* Mobile: banner card (menu-style) */}
+            <header className="sm:hidden absolute top-0 left-0 right-0">
+                <div className={`${bannerCardClass} px-2 sm:px-3 py-2`}>
+                    {/* Row 1: side + timer | center (status + New game) | timer + side */}
+                    <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+                            <div className="relative">
+                                <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg ${bannerSectionClass}`}>
+                                    <div className="w-4 h-4 rounded-full bg-gradient-to-br from-white to-slate-200 flex-shrink-0 flex items-center justify-center border border-white/30">
+                                        <i className="fas fa-chess-king text-slate-800 text-[8px]" aria-hidden />
+                                    </div>
+                                    <span className="text-white font-semibold text-xs">White</span>
+                                </div>
+                                {botThinking && botColor === 'w' && (
+                                    <div className="absolute top-full left-0 mt-1 z-50 inline-flex items-center gap-1.5 px-2 py-1 rounded border border-violet-400/40 bg-violet-500/20 text-violet-200 text-[10px] font-medium shadow-lg whitespace-nowrap">
+                                        <i className="fas fa-robot text-violet-400 animate-pulse" aria-hidden />
+                                        Bot thinking
+                                        <span className="flex gap-0.5">
+                                            <span className="w-1 h-1 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                            <span className="w-1 h-1 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '120ms' }} />
+                                            <span className="w-1 h-1 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '240ms' }} />
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <span className={`font-mono text-[10px] sm:text-xs tabular-nums min-w-[2.75rem] text-center px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap ${teams.w.timeRemaining < 60 ? 'text-red-300 bg-red-500/20' : 'text-slate-200 bg-white/5'}`}>
+                                {formatTime(teams.w.timeRemaining)}
+                            </span>
                         </div>
-                        <span className="text-white font-bold text-lg">
-                            {fenParts.active === 'w' ? 'White' : 'Black'} to move
-                        </span>
+                        <div className="flex items-center justify-center gap-1 flex-shrink-0 min-w-0">
+                            <button
+                                type="button"
+                                onClick={() => dispatch(setViewMode(viewMode === '3d' ? '2d' : '3d'))}
+                                className="pointer-events-auto inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 min-h-0 rounded bg-white/10 hover:bg-white/15 active:bg-white/20 border border-white/[0.12] text-slate-200 hover:text-white text-[9px] font-medium transition-all active:scale-[0.98] touch-manipulation"
+                            >
+                                {viewMode === '3d' ? 'Play 2D' : 'Play 3D'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleNewGame}
+                                className="pointer-events-auto inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 min-h-0 rounded bg-white/10 hover:bg-white/15 active:bg-white/20 border border-white/[0.12] text-slate-200 hover:text-white text-[9px] font-medium transition-all active:scale-[0.98] touch-manipulation"
+                            >
+                                <i className="fas fa-plus text-[7px]" aria-hidden />
+                                New game
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 justify-end">
+                            <span className={`font-mono text-[10px] sm:text-xs tabular-nums min-w-[2.75rem] text-center px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap ${teams.b.timeRemaining < 60 ? 'text-red-300 bg-red-500/20' : 'text-slate-200 bg-white/5'}`}>
+                                {formatTime(teams.b.timeRemaining)}
+                            </span>
+                            <div className="relative">
+                                <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg ${bannerSectionClass}`}>
+                                    <span className="text-white font-semibold text-xs">Black</span>
+                                    <div className="w-4 h-4 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex-shrink-0 flex items-center justify-center border border-slate-500/50">
+                                        <i className="fas fa-chess-king text-slate-200 text-[8px]" aria-hidden />
+                                    </div>
+                                </div>
+                                {botThinking && botColor === 'b' && (
+                                    <div className="absolute top-full right-0 mt-1 z-50 inline-flex items-center gap-1.5 px-2 py-1 rounded border border-violet-400/40 bg-violet-500/20 text-violet-200 text-[10px] font-medium shadow-lg whitespace-nowrap">
+                                        <i className="fas fa-robot text-violet-400 animate-pulse" aria-hidden />
+                                        Bot thinking
+                                        <span className="flex gap-0.5">
+                                            <span className="w-1 h-1 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                            <span className="w-1 h-1 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '120ms' }} />
+                                            <span className="w-1 h-1 rounded-full bg-violet-400/90 animate-bounce" style={{ animationDelay: '240ms' }} />
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                    <div className="text-gray-200 text-sm mt-1 flex items-center space-x-1">
-                        <i className="fas fa-stopwatch text-green-400"></i>
-                        <span>Timer is running...</span>
+                    {/* Row 2: captured pieces underneath */}
+                    <div className="flex items-center justify-between gap-1.5 mt-2 pt-2 border-t border-white/[0.08]">
+                        <div className={`flex items-center gap-1 flex-wrap min-h-[20px] flex-1 min-w-0 overflow-hidden ${capturesTrayWhiteSide}`}>
+                            {teams.b.capturedPieces.length > 0 ? teams.b.capturedPieces.slice(-6).map((p, i) => (
+                                <img key={i} src={getPieceImageBlack(p as PieceType)} alt="" className="w-4 h-4 object-contain flex-shrink-0" />
+                            )) : <span className="text-slate-500 text-[10px]">—</span>}
+                            {materialAdvantage < 0 && (
+                                <span className="font-mono text-[10px] font-semibold tabular-nums text-emerald-600">
+                                    +{Math.abs(materialAdvantage)}
+                                </span>
+                            )}
+                        </div>
+                        <div className={`flex items-center gap-1 flex-wrap min-h-[20px] flex-1 min-w-0 justify-end overflow-hidden ${capturesTrayClass}`}>
+                            {teams.w.capturedPieces.length > 0 ? teams.w.capturedPieces.slice(-6).map((p, i) => (
+                                <img key={i} src={getPieceImageWhite(p as PieceType)} alt="" className="w-4 h-4 object-contain flex-shrink-0" />
+                            )) : <span className="text-slate-500 text-[10px]">—</span>}
+                            {materialAdvantage > 0 && (
+                                <span className="font-mono text-[10px] font-semibold tabular-nums text-emerald-600">
+                                    +{materialAdvantage}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
-            )}
-
-            {/* Mobile Active Player Indicator */}
-            {gameStarted && (
-                <div className={`lg:hidden absolute bottom-2 left-2 backdrop-blur-md rounded-xl p-3 border-2 shadow-xl transition-all duration-300 ${
-                    fenParts.active === 'w' 
-                        ? 'bg-gradient-to-r from-blue-600/90 to-blue-800/90 border-blue-400' 
-                        : 'bg-gradient-to-r from-purple-600/90 to-purple-800/90 border-purple-400'
-                }`}>
-                    <div className="flex items-center space-x-2">
-                        <div className={`w-5 h-5 rounded-full border-2 border-white shadow-lg flex items-center justify-center ${
-                            fenParts.active === 'w' ? 'bg-white' : 'bg-gray-800'
-                        }`}>
-                            <i className={`fas fa-chess-${fenParts.active === 'w' ? 'pawn' : 'pawn'} ${fenParts.active === 'w' ? 'text-gray-800' : 'text-white'} text-xs`}></i>
-                        </div>
-                        <span className="text-white font-bold text-sm">
-                            {fenParts.active === 'w' ? 'White' : 'Black'} to move
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {/* Bot Thinking Indicator */}
-            {/* {botThinking && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] pointer-events-auto">
-                    <div className="bg-gradient-to-r from-purple-600/90 to-purple-800/90 backdrop-blur-md rounded-2xl p-6 border-4 border-purple-400 shadow-2xl text-center">
-                        <div className="text-4xl mb-3">
-                            <i className="fas fa-robot text-purple-300 animate-pulse"></i>
-                        </div>
-                        <h3 className="text-2xl font-bold text-white mb-2">
-                            Bot is thinking...
-                        </h3>
-                        <div className="flex justify-center space-x-1">
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                        </div>
-                    </div>
-                </div>
-            )} */}
+            </header>
 
             {/* Game Over Overlay */}
             {(status === GameStatus.CHECKMATE || status === GameStatus.STALEMATE || status === GameStatus.DRAW) && (
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] pointer-events-auto">
-                    <div className={`${getGameStatusDisplay().bgColor} backdrop-blur-md rounded-2xl p-6 lg:p-8 border-4 shadow-2xl text-center max-w-sm lg:max-w-md mx-4`}>
-                        <div className="text-4xl lg:text-6xl mb-3 lg:mb-4">
-                            <i className={`fas ${getGameStatusDisplay().icon} ${status === GameStatus.CHECKMATE ? 'text-yellow-400' : 'text-gray-400'}`}></i>
+                <div className="absolute inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[10000] pointer-events-auto p-4">
+                    <div className={`${getGameStatusDisplay().bgColor} backdrop-blur-xl rounded-2xl p-6 sm:p-8 border border-white/20 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.08)_inset] text-center max-w-sm sm:max-w-md w-full`}>
+                        <div className="text-4xl sm:text-5xl mb-4 text-white/90">
+                            <i className={`fas ${getGameStatusDisplay().icon}`} aria-hidden />
                         </div>
-                        <h2 className="text-2xl lg:text-4xl font-bold text-white mb-3 lg:mb-4">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
                             {getGameStatusDisplay().text}
                         </h2>
                         {status === GameStatus.CHECKMATE && (
-                            <p className="text-gray-300 text-base lg:text-lg mb-4 lg:mb-6">
+                            <p className="text-white/80 text-sm sm:text-base mb-6">
                                 {fenParts.active === 'w' ? 'Black' : 'White'} has achieved checkmate!
                             </p>
                         )}
                         {status === GameStatus.STALEMATE && (
-                            <p className="text-gray-300 text-base lg:text-lg mb-4 lg:mb-6">
+                            <p className="text-white/80 text-sm sm:text-base mb-6">
                                 The game ends in a draw due to stalemate.
                             </p>
                         )}
                         {status === GameStatus.DRAW && (
-                            <p className="text-gray-300 text-base lg:text-lg mb-4 lg:mb-6">
+                            <p className="text-white/80 text-sm sm:text-base mb-6">
                                 The game ends in a draw.
                             </p>
                         )}
-                        <div className="flex justify-center space-x-4">
-                            <button
-                                onClick={handleNewGame}
-                                className="cursor-pointer px-4 py-2 lg:px-6 lg:py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-sm lg:text-base"
-                            >
-                                <i className="fas fa-redo mr-2"></i>
-                                New Game
-                            </button>
-                        </div>
+                        <button
+                            onClick={handleNewGame}
+                            className="pointer-events-auto cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 bg-white/95 hover:bg-white text-slate-900 font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl"
+                        >
+                            <i className="fas fa-redo text-sm" aria-hidden />
+                            New game
+                        </button>
                     </div>
                 </div>
             )}

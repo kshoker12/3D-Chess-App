@@ -7,6 +7,8 @@ export enum GameMode {
 
 export type PlayerColor = 'w' | 'b' | null;
 
+export type ViewMode = '2d' | '3d';
+
 export type BotDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface Team {
@@ -60,4 +62,5 @@ export interface UIState {
     showGameModeMenu: boolean;
     botThinking: boolean;
     isAutomated: boolean;
+    viewMode: ViewMode;
 }
