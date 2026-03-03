@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { decrementTimer, resetUI, setShowGameModeMenu, setViewMode } from '../store/slices/uiSlice';
@@ -14,6 +14,8 @@ const GameUI: React.FC = () => {
     const botColor = playerColor === 'w' ? 'b' : 'w';
     const { status } = useSelector((state: RootState) => state.game);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [showCheckmateOverlay, setShowCheckmateOverlay] = useState(false);
+    const checkmateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Timer logic
     useEffect(() => {
@@ -34,6 +36,31 @@ const GameUI: React.FC = () => {
             }
         };
     }, [gameStarted, fenParts.active, dispatch]);
+
+    // Delay checkmate overlay slightly so the final position is obvious.
+    useEffect(() => {
+        if (checkmateTimeoutRef.current) {
+            clearTimeout(checkmateTimeoutRef.current);
+            checkmateTimeoutRef.current = null;
+        }
+
+        if (status === GameStatus.CHECKMATE) {
+            setShowCheckmateOverlay(false);
+            checkmateTimeoutRef.current = setTimeout(() => {
+                setShowCheckmateOverlay(true);
+                checkmateTimeoutRef.current = null;
+            }, 3000);
+        } else {
+            setShowCheckmateOverlay(false);
+        }
+
+        return () => {
+            if (checkmateTimeoutRef.current) {
+                clearTimeout(checkmateTimeoutRef.current);
+                checkmateTimeoutRef.current = null;
+            }
+        };
+    }, [status]);
 
     const formatTime = (seconds: number): string => {
         const mins = Math.floor(seconds / 60);
@@ -304,7 +331,7 @@ const GameUI: React.FC = () => {
             </header>
 
             {/* Game Over Overlay */}
-            {(status === GameStatus.CHECKMATE || status === GameStatus.STALEMATE || status === GameStatus.DRAW) && (
+            {(status === GameStatus.STALEMATE || status === GameStatus.DRAW || (status === GameStatus.CHECKMATE && showCheckmateOverlay)) && (
                 <div className="absolute inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[10000] pointer-events-auto p-4">
                     <div className={`${getGameStatusDisplay().bgColor} backdrop-blur-xl rounded-2xl p-6 sm:p-8 border border-white/20 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.08)_inset] text-center max-w-sm sm:max-w-md w-full`}>
                         <div className="text-4xl sm:text-5xl mb-4 text-white/90">
@@ -314,9 +341,14 @@ const GameUI: React.FC = () => {
                             {getGameStatusDisplay().text}
                         </h2>
                         {status === GameStatus.CHECKMATE && (
-                            <p className="text-white/80 text-sm sm:text-base mb-6">
-                                {fenParts.active === 'w' ? 'Black' : 'White'} has achieved checkmate!
-                            </p>
+                            <>
+                                <p className="text-white/80 text-sm sm:text-base mb-2">
+                                    {fenParts.active === 'w' ? 'Black' : 'White'} has achieved checkmate!
+                                </p>
+                                <p className="text-white/90 text-base sm:text-lg font-semibold mb-6">
+                                    {(fenParts.active === 'w' ? 'b' : 'w') === playerColor ? 'You won.' : 'You lost.'}
+                                </p>
+                            </>
                         )}
                         {status === GameStatus.STALEMATE && (
                             <p className="text-white/80 text-sm sm:text-base mb-6">

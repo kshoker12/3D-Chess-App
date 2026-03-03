@@ -79,11 +79,16 @@ export const makeMove = createAsyncThunk<
             const moveWithPromotion = {
                 from: move.from,
                 to: move.to,
-                promotion: result.promotion ? result.promotion.toUpperCase() as PieceType : move.promotion
+                promotion: result.promotion ? result.promotion.toLowerCase() as PieceType : move.promotion
             };
-            
-            dispatch(setLastMove({from: move.from, to: move.to, promotion: result.promotion ? result.promotion.toUpperCase() as PieceType : undefined}));
+
+            // First update the board (so promoted pieceId is present), then record lastMove for 2D animations
             dispatch(applyMove({move: moveWithPromotion, chessResult: result}));
+            dispatch(setLastMove({
+                from: move.from,
+                to: move.to,
+                promotion: result.promotion ? result.promotion.toLowerCase() as PieceType : undefined
+            }));
             dispatch(setFenParts(parseFen(newFen)));
             dispatch(setSelectedSquare(null));
             
@@ -142,7 +147,7 @@ export const makeBotMove = createAsyncThunk<
         
         // Handle promotion moves (5 characters: e7e8q)
         if (moveString.length === 5) {
-            const promotionPiece = moveString.charAt(4).toUpperCase();
+            const promotionPiece = moveString.charAt(4).toLowerCase();
             move.promotion = promotionPiece as any;
         }
         

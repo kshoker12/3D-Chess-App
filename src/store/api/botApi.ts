@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { BotDifficulty } from '../../types/uiTypes';
 
+/** When true (default), use RunPod API; when false, use local backend at localhost:8001 */
+const USE_RUNPOD = import.meta.env.VITE_USE_RUNPOD !== 'false';
+
+const LOCAL_BASE = 'http://localhost:8001/v1/api';
 const RUNPOD_BASE = 'https://api.runpod.ai/v2/jghaygl631t1rr';
 const POLL_INTERVAL_MS = 1500;
 const POLL_MAX_ATTEMPTS = 120; // 3 min max
@@ -48,8 +52,10 @@ function buildRunInput(difficulty: BotDifficulty, pgn: string): Record<string, u
     }
 }
 
-/** Submit job and poll until COMPLETED or FAILED */
-async function runPodJob(difficulty: BotDifficulty, pgn: string): Promise<MoveResponse> {
+/** Submit job and poll until COMPLETED or FAILED.
+ * If no completed result arrives within ~60s, submit a fresh /run request (once) and try again.
+ */
+async function runPodJob(difficulty: BotDifficulty, pgn: string, retryCount = 0): Promise<MoveResponse> {
     const apiKey = getRunPodApiKey();
     const headers = {
         'Content-Type': 'application/json',
@@ -64,6 +70,8 @@ async function runPodJob(difficulty: BotDifficulty, pgn: string): Promise<MoveRe
     );
     const jobId = runRes.data.id;
     if (!jobId) throw new Error('RunPod did not return a job id');
+
+    const startTime = Date.now();
 
     for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
@@ -86,99 +94,103 @@ async function runPodJob(difficulty: BotDifficulty, pgn: string): Promise<MoveRe
             const msg = output?.error ?? 'Job failed';
             throw new Error(msg);
         }
+
+        // If we've been waiting ~60s without completion, submit a new job once
+        if (Date.now() - startTime > 60000 && retryCount < 1) {
+            console.warn('RunPod job exceeded 60s without completion; retrying with a new job.');
+            return runPodJob(difficulty, pgn, retryCount + 1);
+        }
     }
 
     throw new Error('RunPod job timed out');
 }
 
-export const fetchBotMove = async (
-    _fen: string,
-    difficulty: BotDifficulty = 'medium',
-    pgn: string = '',
-    _agent?: number
-): Promise<MoveResponse> => {
-    return runPodJob(difficulty, pgn);
+// --- Local backend (localhost:8001) ---
+const difficultyToDepth: Record<BotDifficulty, number> = {
+    easy: 12,
+    medium: 8,
+    hard: 8,
 };
 
-// ---------------------------------------------------------------------------
-// Previous direct API routes (commented out – now using RunPod above)
-// ---------------------------------------------------------------------------
-//
-// export interface MoveRequest {
-//     fen: string;
-//     max_depth: number;
-//     difficulty: string;
-// }
-//
-// const difficultyToDepth: Record<BotDifficulty, number> = {
-//     easy: 12,
-//     medium: 8,
-//     hard: 8,
-// };
-//
-// interface TransformerMoveResponse {
-//     best_move: string;
-//     error?: string;
-// }
-//
-// const fetchTransformerMove = async (pgn: string, agent?: number): Promise<MoveResponse> => {
-//     const apiBaseUrl = import.meta.env.VITE_API_TRANSFORMER_URL || 'http://localhost:8001/v1/api/transformer-move';
-//     const payload: any = { pgn };
-//     if (agent !== undefined) payload.agent = agent;
-//     const response = await axios.post<TransformerMoveResponse>(apiBaseUrl, payload);
-//     if (response.data.error) throw new Error(response.data.error);
-//     if (!response.data.best_move) throw new Error('Model failed to generate a valid legal move');
-//     return { best_move: response.data.best_move, score_cp: 0 };
-// };
-//
-// export const fetchMediumModeMove = async (pgn: string, agent?: number): Promise<MoveResponse> => {
-//     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/v1/api/alphabeta-eval';
-//     const payload: any = { pgn };
-//     if (agent !== undefined) payload.agent = agent;
-//     const response = await axios.post<TransformerMoveResponse>(apiBaseUrl, payload);
-//     if (response.data.error) throw new Error(response.data.error);
-//     if (!response.data.best_move) throw new Error('Model failed to generate a valid legal move');
-//     return { best_move: response.data.best_move, score_cp: 0 };
-// };
-//
-// export const fetchTransformerSearchMove = async (pgn: string, agent?: number): Promise<MoveResponse> => {
-//     const apiBaseUrl = import.meta.env.VITE_API_TRANSFORMER_URL || 'http://localhost:8001/v1/api/mcts-3';
-//     const payload: any = { pgn };
-//     if (agent !== undefined) payload.agent = agent;
-//     const response = await axios.post<TransformerMoveResponse>(apiBaseUrl, payload);
-//     if (response.data.error) throw new Error(response.data.error);
-//     if (!response.data.best_move) throw new Error('Model failed to generate a valid legal move');
-//     return { best_move: response.data.best_move, score_cp: 0 };
-// };
-//
-// Old fetchBotMove (direct URLs):
-//
-// export const fetchBotMove = async (fen: string, difficulty: BotDifficulty = 'medium', pgn: string = '', agent?: number): Promise<MoveResponse> => {
-//     if (difficulty === 'easy') {
-//         try {
-//             return await fetchTransformerMove(pgn, agent);
-//         } catch (error) {
-//             console.warn('Falling back to minimax due to transformer error:', error);
-//         }
-//     }
-//     if (difficulty === 'medium') {
-//         try {
-//             return await fetchMediumModeMove(pgn, agent);
-//         } catch (error) {
-//             console.warn('Falling back to minimax due to medium mode error:', error);
-//         }
-//     } else if (difficulty === 'hard') {
-//         try {
-//             return await fetchTransformerSearchMove(pgn, agent);
-//         } catch (error) {
-//             console.warn('Falling back to minimax due to transformer error:', error);
-//         }
-//     }
-//     const requestBody: any = { fen, max_depth: difficultyToDepth[difficulty], difficulty };
-//     if (agent !== undefined) requestBody.agent = agent;
-//     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/v1/api/move';
-//     const response = await axios.post(apiBaseUrl, requestBody);
-//     const data: MoveResponse = response.data;
-//     if (!data.best_move) throw new Error('Invalid response: missing best_move');
-//     return data;
-// };
+interface LocalMoveResponse {
+    best_move: string;
+    score_cp?: number;
+    error?: string;
+}
+
+async function fetchLocalTransformerMove(pgn: string, agent?: number): Promise<MoveResponse> {
+    const payload: Record<string, unknown> = { pgn };
+    if (agent !== undefined) payload.agent = agent;
+    const response = await axios.post<LocalMoveResponse>(`${LOCAL_BASE}/transformer-move`, payload);
+    if (response.data.error) throw new Error(response.data.error);
+    if (!response.data.best_move) throw new Error('Model failed to generate a valid legal move');
+    return { best_move: response.data.best_move, score_cp: response.data.score_cp ?? 0 };
+}
+
+async function fetchLocalMediumMove(pgn: string, agent?: number): Promise<MoveResponse> {
+    const payload: Record<string, unknown> = { pgn };
+    if (agent !== undefined) payload.agent = agent;
+    const response = await axios.post<LocalMoveResponse>(`${LOCAL_BASE}/alphabeta-eval`, payload);
+    if (response.data.error) throw new Error(response.data.error);
+    if (!response.data.best_move) throw new Error('Model failed to generate a valid legal move');
+    return { best_move: response.data.best_move, score_cp: response.data.score_cp ?? 0 };
+}
+
+async function fetchLocalMctsMove(pgn: string, agent?: number): Promise<MoveResponse> {
+    const payload: Record<string, unknown> = { pgn };
+    if (agent !== undefined) payload.agent = agent;
+    const response = await axios.post<LocalMoveResponse>(`${LOCAL_BASE}/mcts-3`, payload);
+    if (response.data.error) throw new Error(response.data.error);
+    if (!response.data.best_move) throw new Error('Model failed to generate a valid legal move');
+    return { best_move: response.data.best_move, score_cp: response.data.score_cp ?? 0 };
+}
+
+async function fetchLocalBotMove(
+    fen: string,
+    difficulty: BotDifficulty,
+    pgn: string,
+    agent?: number
+): Promise<MoveResponse> {
+    if (difficulty === 'easy') {
+        try {
+            return await fetchLocalTransformerMove(pgn, agent);
+        } catch (e) {
+            console.warn('Local transformer error, falling back to minimax:', e);
+        }
+    }
+    if (difficulty === 'medium') {
+        try {
+            return await fetchLocalMediumMove(pgn, agent);
+        } catch (e) {
+            console.warn('Local alphabeta error, falling back to minimax:', e);
+        }
+    }
+    if (difficulty === 'hard') {
+        try {
+            return await fetchLocalMctsMove(pgn, agent);
+        } catch (e) {
+            console.warn('Local MCTS error, falling back to minimax:', e);
+        }
+    }
+    const body: Record<string, unknown> = {
+        fen,
+        max_depth: difficultyToDepth[difficulty],
+        difficulty,
+    };
+    if (agent !== undefined) body.agent = agent;
+    const response = await axios.post<MoveResponse>(`${LOCAL_BASE}/move`, body);
+    if (!response.data.best_move) throw new Error('Invalid response: missing best_move');
+    return response.data;
+}
+
+export const fetchBotMove = async (
+    fen: string,
+    difficulty: BotDifficulty = 'medium',
+    pgn: string = '',
+    agent?: number
+): Promise<MoveResponse> => {
+    if (USE_RUNPOD) {
+        return runPodJob(difficulty, pgn);
+    }
+    return fetchLocalBotMove(fen, difficulty, pgn, agent);
+};
