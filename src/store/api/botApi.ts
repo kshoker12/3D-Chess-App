@@ -48,7 +48,7 @@ function buildRunInput(difficulty: BotDifficulty, pgn: string): Record<string, u
         case 'hard':
             return { endpoint: 'mcts-3', pgn, simulations: 400 };
         default:
-            return { endpoint: 'alphabeta-eval', pgn, depth: 3 };
+            return { endpoint: 'alphabeta-eval', pgn, depth: 4 };
     }
 }
 
