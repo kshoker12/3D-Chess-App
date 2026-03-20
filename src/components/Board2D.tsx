@@ -101,14 +101,16 @@ const Board2D: React.FC = () => {
 
     const ranks = playerColor === 'b' ? RANKS_BLACK_AT_BOTTOM : RANKS_WHITE_AT_BOTTOM;
     const squares = useMemo(() => {
+        // Horizontal mirroring: for black view, render files right-to-left (a-h becomes h-a).
+        const files = playerColor === 'b' ? [...FILES].reverse() : FILES;
         const out: SquareId[] = [];
         for (const r of ranks) {
-            for (const f of FILES) {
+            for (const f of files) {
                 out.push(`${f}${r}` as SquareId);
             }
         }
         return out;
-    }, [ranks]);
+    }, [playerColor, ranks]);
 
     useEffect(() => {
         if (!lastMove || !gridRef.current) return;
