@@ -8,7 +8,12 @@ import { GameStatus } from '../types/gameTypes';
 import { resetGame } from '../store/slices/gameSlice';
 import { setBoardFromFen, setLastMove, setMovingPiece } from '../store/slices/boardSlice';
 
-const GameUI: React.FC = () => {
+interface GameUIProps {
+    webglSupported?: boolean;
+    onWebglUnavailable?: () => void;
+}
+
+const GameUI: React.FC<GameUIProps> = ({ webglSupported = true, onWebglUnavailable }) => {
     const dispatch = useDispatch();
     const { teams, fenParts, gameStarted, botThinking, playerColor, viewMode } = useSelector((state: RootState) => state.ui);
     const botColor = playerColor === 'w' ? 'b' : 'w';
@@ -110,8 +115,19 @@ const GameUI: React.FC = () => {
         }
     };
 
+    const handleToggleViewMode = () => {
+        if (viewMode === '3d') {
+            dispatch(setViewMode('2d'));
+            return;
+        }
+        if (!webglSupported) {
+            onWebglUnavailable?.();
+            return;
+        }
+        dispatch(setViewMode('3d'));
+    };
+
     const handleNewGame = () => {
-        // Reset all slice states
         dispatch(resetGame());
         dispatch(resetUI());
         dispatch(setBoardFromFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'));
@@ -166,7 +182,7 @@ const GameUI: React.FC = () => {
                         <div className="flex items-center justify-center gap-2 sm:gap-3 flex-shrink-0">
                             <button
                                 type="button"
-                                onClick={() => dispatch(setViewMode(viewMode === '3d' ? '2d' : '3d'))}
+                                onClick={handleToggleViewMode}
                                 className="pointer-events-auto flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 min-h-[2.5rem] sm:min-h-0 rounded-lg sm:rounded-xl bg-white/10 hover:bg-white/15 border border-white/[0.12] text-slate-200 hover:text-white text-xs sm:text-sm font-medium transition-all shadow-sm active:scale-[0.98]"
                             >
                                 {viewMode === '3d' ? 'Play 2D' : 'Play 3D'}
@@ -265,7 +281,7 @@ const GameUI: React.FC = () => {
                         <div className="flex items-center justify-center gap-1 flex-shrink-0 min-w-0">
                             <button
                                 type="button"
-                                onClick={() => dispatch(setViewMode(viewMode === '3d' ? '2d' : '3d'))}
+                                onClick={handleToggleViewMode}
                                 className="pointer-events-auto inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 min-h-0 rounded bg-white/10 hover:bg-white/15 active:bg-white/20 border border-white/[0.12] text-slate-200 hover:text-white text-[9px] font-medium transition-all active:scale-[0.98] touch-manipulation"
                             >
                                 {viewMode === '3d' ? 'Play 2D' : 'Play 3D'}

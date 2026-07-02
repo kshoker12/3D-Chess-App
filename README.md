@@ -3,12 +3,12 @@
 [![React](https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Three.js](https://img.shields.io/badge/Three.js-0.163.0-000000?logo=three.js)](https://threejs.org/)
-[![AWS Amplify](https://img.shields.io/badge/AWS-Amplify-FF9900?logo=amazon-aws)](https://aws.amazon.com/amplify/)
+[![GitHub Pages](https://img.shields.io/badge/GitHub-Pages-222222?logo=github)](https://pages.github.com/)
 [![Redux Toolkit](https://img.shields.io/badge/Redux%20Toolkit-2.9.1-764ABC?logo=redux)](https://redux-toolkit.js.org/)
 
-> **Live Demo**: [Deployed on AWS Amplify](https://your-amplify-url.amplifyapp.com) | **Backend**: [Neural Chess Engine](https://github.com/kshoker12/Chess-Engine)
+> **Live Demo**: [kshoker12.github.io/3D-Chess-App](https://kshoker12.github.io/3D-Chess-App/) | **Backend**: [Neural Chess Engine](https://github.com/kshoker12/Chess-Engine)
 
-A production-grade 3D chess application built with modern web technologies, featuring real-time gameplay, AI integration, and cloud deployment. Demonstrates expertise in full-stack development, 3D graphics programming, and cloud architecture.
+A production-grade 3D chess application built with modern web technologies, featuring real-time gameplay, AI integration, and automated deployment to GitHub Pages.
 
 ## 🚀 Technical Highlights
 
@@ -34,7 +34,6 @@ A production-grade 3D chess application built with modern web technologies, feat
 ### Performance Optimizations
 - **Memoized components** preventing unnecessary re-renders
 - **Piece-specific selectors** for granular Redux updates
-- **Lazy loading** and code splitting for optimal bundle size
 - **Spring-based animations** with React Spring for smooth transitions
 
 ## 🎮 Gameplay Modes
@@ -48,44 +47,48 @@ A production-grade 3D chess application built with modern web technologies, feat
 ### VS Bot Mode
 - **Challenge AI opponent** with adjustable difficulty
 - **Difficulty Selection**:
-  - **Easy**: Beginner-friendly gameplay
-  - **Medium**: Balanced challenge (default)
-  - **Hard**: Advanced difficulty for experienced players
+  - **Easy**: Transformer-based move selection
+  - **Medium**: Alpha-beta search (default)
+  - **Hard**: Monte Carlo tree search
 - **Color Selection**: Choose to play as White or Black
 - Bot automatically makes first move if you choose Black
 - Real-time game state updates
 
 ## 🔗 Backend Integration
 
-Seamlessly integrated with a custom neural chess engine featuring:
-- **RESTful API** communication with environment-based configuration
-- **Axios HTTP client** with comprehensive error handling
-- **Adjustable AI difficulty** via `difficulty` parameter (easy/medium/hard)
-- **Configurable search depth** with `max_depth` parameter
-- **Hybrid AI evaluation** combining neural networks with classical algorithms
-- **Serverless deployment** on AWS Lambda with ARM64 optimization
+The frontend talks to a chess AI backend via **RunPod** (default) or a **local dev server**:
 
-> **Backend Repository**: [Neural Chess Engine](https://github.com/kshoker12/Chess-Engine) - A production-grade chess engine with machine learning evaluation and alpha-beta search algorithms.
+| Difficulty | RunPod endpoint | Local endpoint |
+|------------|-----------------|----------------|
+| Easy | `transformer-move` | `POST /v1/api/transformer-move` |
+| Medium | `alphabeta-eval` | `POST /v1/api/alphabeta-eval` |
+| Hard | `mcts-3` | `POST /v1/api/mcts-3` |
 
-## ☁️ AWS Amplify Deployment
+- **RunPod serverless API** for production (async job submit + poll)
+- **Local backend** at `http://localhost:8001` when `VITE_USE_RUNPOD=false`
+- **Axios HTTP client** with error handling and timeout retries
+
+> **Backend Repository**: [Neural Chess Engine](https://github.com/kshoker12/Chess-Engine) — machine learning evaluation, alpha-beta search, and MCTS.
+
+## ☁️ GitHub Pages Deployment
+
+The app deploys automatically via GitHub Actions on every push to `main`.
+
+### Live URL
+**https://kshoker12.github.io/3D-Chess-App/**
 
 ### CI/CD Pipeline
-- **Automated builds** triggered on git push to main branch
-- **TypeScript compilation** with strict type checking
-- **Production optimizations** via Vite bundler
-- **Environment variable management** for API configuration
+- **Trigger**: push to `main` or manual `workflow_dispatch`
+- **Build**: `tsc && vite build` with `VITE_BASE_PATH=/3D-Chess-App/`
+- **Deploy**: GitHub Pages artifact upload via `actions/deploy-pages`
 
-### Infrastructure
-- **Static site hosting** on AWS Amplify
-- **Global CDN distribution** for optimal performance
-- **HTTPS by default** with automatic SSL certificates
-- **Custom domain support** for professional deployment
+### One-time setup
+1. In the repo, go to **Settings → Pages**
+2. Set **Source** to **GitHub Actions**
+3. Add a repository secret: `VITE_RUNPOD_API_KEY` (required for bot mode in production)
 
-### Build Configuration
-- **pnpm package manager** for efficient dependency management
-- **Multi-stage build process**: `tsc && vite build`
-- **Production asset optimization** and minification
-- **TypeScript strict mode** ensuring code quality
+### Workflow file
+`.github/workflows/deploy.yml`
 
 ## 🛠️ Development Workflow
 
@@ -96,27 +99,30 @@ pnpm install
 
 # Start development server
 pnpm dev
-
-# Run with hot reload on localhost:5173
+# → http://localhost:5173
 ```
 
 ### Production Build
 ```bash
-# Build for production
+# Standard build (served from root)
 pnpm build
-
-# Preview production build
 pnpm preview
+
+# Preview the GitHub Pages build locally
+VITE_BASE_PATH=/3D-Chess-App/ pnpm build
+pnpm preview --base /3D-Chess-App/
 ```
 
 ### Environment Setup
 ```bash
-# Copy environment template
 cp .env.example .env
-
-# Configure API endpoint
-# VITE_API_BASE_URL=https://your-api-gateway-url.amazonaws.com/prod/move
 ```
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_RUNPOD_API_KEY` | RunPod API key (required for bot mode in production) |
+| `VITE_USE_RUNPOD` | Set to `false` to use local backend at `localhost:8001` |
+| `VITE_BASE_PATH` | Asset base path; set to `/3D-Chess-App/` for GitHub Pages preview |
 
 ## 📊 Tech Stack
 
@@ -132,8 +138,8 @@ cp .env.example .env
 | **Animations** | React Spring | Smooth transitions |
 | **Chess Logic** | chess.js 1.4.0 | Game rules & validation |
 | **HTTP Client** | Axios 1.12.2 | API communication |
-| **Backend API** | Custom Neural Engine | AI-powered moves |
-| **Cloud Hosting** | AWS Amplify | Serverless deployment |
+| **AI Backend** | RunPod serverless | Bot move generation |
+| **Hosting** | GitHub Pages | Static site deployment |
 
 ## 🏗️ Project Architecture
 
@@ -142,19 +148,21 @@ cp .env.example .env
 ```
 src/
 ├── components/          # React components
-│   ├── Board.tsx       # 3D chess board
-│   ├── Piece.tsx       # Individual chess pieces
-│   ├── GameUI.tsx      # Game interface with responsive design
+│   ├── Board.tsx        # 3D chess board
+│   ├── Piece.tsx        # Individual chess pieces
+│   ├── GameUI.tsx       # Game interface
 │   ├── GameModeMenu.tsx # Game mode & difficulty selection
-│   ├── Square.tsx      # Chess board squares
-│   └── Table.tsx       # 3D table environment
-├── store/              # Redux store
-│   ├── slices/         # Redux slices
-│   ├── selectors/      # Optimized selectors
-│   └── api/            # API integration
-├── types/              # TypeScript definitions
-├── utils/              # Helper functions
-└── context/            # React context (legacy)
+│   ├── Square.tsx       # Chess board squares
+│   └── Table.tsx        # 3D table environment
+├── store/               # Redux store
+│   ├── slices/          # Redux slices
+│   ├── selectors/       # Optimized selectors
+│   └── api/             # Bot API (RunPod / local)
+├── types/               # TypeScript definitions
+└── utils/               # Helpers (ChessHelper, assets, FEN)
+public/
+├── models/              # GLB piece models
+└── textures/            # Board and environment images
 ```
 
 ### Redux Store Structure
@@ -164,16 +172,18 @@ src/
 
 ### Helper Utilities
 - **ChessHelper**: Board creation, move application, legal move generation
+- **assets**: Resolves public asset paths for GitHub Pages subpath deployment
 - **FEN parsing**: Standard chess notation handling
-- **API integration**: Bot move fetching and error handling
+- **botApi**: RunPod job submission/polling and local backend fallbacks
 
 ## 🎯 Key Engineering Decisions
 
 - **React Three Fiber** over vanilla Three.js for seamless React integration
 - **Redux Toolkit** for predictable state management and developer experience
 - **TypeScript** for type safety, better IDE support, and reduced runtime errors
-- **AWS Amplify** for serverless hosting with automatic CI/CD
-- **Environment variables** for flexible API configuration across environments
+- **GitHub Pages + Actions** for zero-cost static hosting with automated CI/CD
+- **RunPod** for serverless AI inference without managing GPU infrastructure
+- **Environment variables** for flexible API configuration across local and production
 
 ## 🔮 Future Enhancements
 
@@ -182,7 +192,6 @@ src/
 - **Opening book integration** for enhanced AI gameplay
 - **ELO rating system** for player skill tracking
 - **Tournament mode** with bracket management
-- **Mobile responsiveness** optimization for touch devices
 
 ## 🏆 What This Demonstrates
 
@@ -190,9 +199,8 @@ This project showcases expertise in:
 - **Full-stack development** with modern React and TypeScript
 - **3D graphics programming** using WebGL and Three.js
 - **State management architecture** with Redux Toolkit
-- **Cloud deployment** and CI/CD with AWS Amplify
-- **API integration** with custom backend services
+- **CI/CD deployment** with GitHub Actions and GitHub Pages
+- **Serverless AI integration** via RunPod
 - **Production-grade engineering** with proper error handling and optimization
-- **Modern development practices** including TypeScript, ESLint, and Prettier
 
 ---
