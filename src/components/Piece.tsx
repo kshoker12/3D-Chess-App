@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { store } from '../store/store';
 import { createPieceSpecificSelectors } from '../store/selectors/boardSelectors';
 import { getPieceRotation } from '../utils/ChessHelper';
+import { assetPath } from '../utils/assets';
 import { PieceId, SquareId } from '../types/boardTypes';
 import { setSelectedSquare, setMovingPiece } from '../store/slices/boardSlice';
 import { Move } from '../types/gameTypes';
@@ -43,7 +44,7 @@ const Piece: FC<PieceProps> = memo(({ piece, squareId }) => {
 		const color = pieceColor as 'w' | 'b';
 		const type = pieceType as 'p' | 'r' | 'n' | 'b' | 'q' | 'k';
 		
-		const modelPath = color === 'w' ? './models/chess_white.glb' : './models/chess_black.glb';
+		const modelPath = color === 'w' ? assetPath('models/chess_white.glb') : assetPath('models/chess_black.glb');
 		const chessModel = useGLTF(modelPath);
 		
 		// Just get the Queen node for promoted pieces, or the correct node for others

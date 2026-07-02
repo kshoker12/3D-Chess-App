@@ -5,12 +5,13 @@ import { selectBoard } from '../store/selectors/boardSelectors';
 import Square from './Square';
 import { Rank, SQUARE_COLOURS, SquareId } from '../types/boardTypes';
 import Pieces from './Pieces';
+import { assetPath } from '../utils/assets';
 
 const Board: FC = () => {
 	const board = useAppSelector(selectBoard);
-	const white = useTexture('./whiteface.jpeg');
-	const brown = useTexture('./brownface.jpeg');
-	const wood = useTexture('./woodTexture.jpeg');
+	const white = useTexture(assetPath('whiteface.jpeg'));
+	const brown = useTexture(assetPath('brownface.jpeg'));
+	const wood = useTexture(assetPath('woodTexture.jpeg'));
 
 	// Memoize the square list to prevent recreation on every render
 	const squares = useMemo(() => {

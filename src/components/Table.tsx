@@ -1,10 +1,11 @@
 import { Box, useTexture } from "@react-three/drei";
 import { FC } from "react";
+import { assetPath } from "../utils/assets";
 
 const Table: FC = () => {
-	const tableTexture = useTexture('/table2.jpeg');
-	const floor = useTexture('/floor.jpeg');
-	const wall = useTexture('/wall.jpeg');
+	const tableTexture = useTexture(assetPath('table2.jpeg'));
+	const floor = useTexture(assetPath('floor.jpeg'));
+	const wall = useTexture(assetPath('wall.jpeg'));
 
 	return (
 		<>
